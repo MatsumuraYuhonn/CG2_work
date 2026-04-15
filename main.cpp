@@ -1,6 +1,7 @@
 #include <Windows.h>
 #include <cstdint>
-
+#include <string>
+#include<format>
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 
@@ -14,6 +15,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 
 	return DefWindowProc(hwnd, msg, wparam, lparam);
 }
+
+void Log(const std::string& message) {
+	OutputDebugStringA(message.c_str());
+}
+
+std::wstring ConvertString(const std::string& str);
+
+std::string ConvertString(const std::wstring& wstr);
+
+
 
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
