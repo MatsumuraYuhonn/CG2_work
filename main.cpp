@@ -4,6 +4,7 @@
 #include<cassert>
 #include "Logger.h"
 #include "Window.h"
+#include "CrashHandler.h"
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -11,6 +12,7 @@
 
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
+	SetUnhandledExceptionFilter(ExportDump);
 
 	InitializeLogger();
 
@@ -80,6 +82,10 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	// メインループ
 	MSG msg{};
+
+	uint32_t* p = nullptr;
+	*p = 100;
+
 
 	while (msg.message != WM_QUIT) {
 
