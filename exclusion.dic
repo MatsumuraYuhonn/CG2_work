@@ -119,3 +119,11 @@ skybox
 wireframe
 fullscreen
 vsync
+
+dxgi
+wparam
+lparam
+
+dxgi
+wparam
+lparam

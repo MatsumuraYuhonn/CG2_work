@@ -1,11 +1,25 @@
 #include"Logger.h"
 
+static std::ofstream g_logStream;
+
+void Log(const std::string& message)
+{
+    OutputDebugStringA(message.c_str());
+
+
+    if (g_logStream.is_open()) {
+        g_logStream << message;
+        g_logStream.flush();
+    }
+}
+
 // ログを出力する関数
 void Log(std::ostream& os, const std::string& message) {
 
 	os << message << std::endl;
 
 	OutputDebugStringA(message.c_str());
+
 }
 
 
@@ -65,6 +79,6 @@ void createLogFile()
     std::string logFilePath = std::string("logs/") + dateString + ".log";
 
 	// ログファイルを作成
-    std::ofstream logStream(logFilePath);
+    g_logStream.open(logFilePath);
 
 }

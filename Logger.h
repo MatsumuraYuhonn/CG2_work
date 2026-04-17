@@ -6,8 +6,9 @@
 #include<fstream>
 #include<chrono>
 
-
 void Log(std::ostream& os, const std::string& message);
+
+void Log(const std::string& message);
 
 std::wstring ConvertString(const std::string& str);
 

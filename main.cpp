@@ -1,78 +1,94 @@
 #include <Windows.h>
-#include <cstdint>
+#include <d3d12.h>
+#include <dxgi1_6.h>
+#include<cassert>
 #include "Logger.h"
+#include "Window.h"
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
-
-	switch (msg) {
-
-	case WM_DESTROY:
-
-		PostQuitMessage(0);
-		return 0;
-	}
-
-	return DefWindowProc(hwnd, msg, wparam, lparam);
-}
+#pragma comment(lib, "d3d12.lib")
+#pragma comment(lib, "dxgi.lib")
 
 
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
-		
+
 
 	InitializeLogger();
 
 	createLogFile();
 
+	IDXGIFactory7* dxgiFactory = nullptr;
 
-	WNDCLASS wc{};
+	HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
 
-	wc.lpfnWndProc = WindowProc;
+	assert(SUCCEEDED(hr));
 
-	wc.lpszClassName = L"CG2WindowClass";
+	IDXGIAdapter4* useAdapter = nullptr;
 
-	wc.hInstance = GetModuleHandle(nullptr);
-
-	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-
-	RegisterClass(&wc);
+	for (UINT i = 0; dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+		IID_PPV_ARGS(&useAdapter)) != DXGI_ERROR_NOT_FOUND; i++) {
 
 
-	const int32_t kClientWidth = 1280;
-	const int32_t kClientHeight = 720;
+		DXGI_ADAPTER_DESC3 adapterDesc{};
 
-	RECT wrc = { 0, 0, kClientWidth, kClientHeight };
+		hr = useAdapter->GetDesc3(&adapterDesc);
 
-	AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
+		assert(SUCCEEDED(hr));
+
+		if (!(adapterDesc.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE)) {
+
+			Log(ConvertString(std::format(L"Use Adapter!{}\n", adapterDesc.Description)));
+
+			break;
+		}
 
 
-	HWND hwnd = CreateWindow(
-		wc.lpszClassName,
-		L"CG2",
-		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 
-		CW_USEDEFAULT,
-		wrc.right - wrc.left,
-		wrc.bottom - wrc.top,
-		nullptr,
-		nullptr,
-		wc.hInstance,
-		nullptr);
+		useAdapter = nullptr;
 
-	// ウィンドウを表示する
-	ShowWindow(hwnd, SW_SHOW);
+	}
 
+	assert(useAdapter != nullptr);
+
+
+	ID3D12Device* device = nullptr;
+
+	D3D_FEATURE_LEVEL featureLevels[] = {
+
+		D3D_FEATURE_LEVEL_12_2,  D3D_FEATURE_LEVEL_12_1,  D3D_FEATURE_LEVEL_12_0,
+
+	};
+
+	const char* featureLevelStrings[] = {
+		"12.2", "12.1", "12.0",
+	};
+
+	for (size_t i = 0; i < _countof(featureLevels); ++i) {
+
+		hr = D3D12CreateDevice(useAdapter, featureLevels[i], IID_PPV_ARGS(&device));
+
+		if (SUCCEEDED(hr)) {
+
+			Log(std::format("Feature Level : {}\n", featureLevelStrings[i]));
+
+			break;
+		}
+	}
+
+	assert(device != nullptr);
+	Log("complete create D3D12Device!!!\n");
+
+	HWND hwnd = CreateGameWindow();
 
 	// メインループ
 	MSG msg{};
-	
+
 	while (msg.message != WM_QUIT) {
-		
+
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
 		else {
-			
+
 			// ゲームの処理
 
 

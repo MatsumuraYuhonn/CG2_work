@@ -5,7 +5,7 @@ spelling_error_severity = error
 
 spelling_checkable_types = identifiers,comments
 
-spelling_languages = eu-us
+spelling_languages = en-us
 
 spelling_use_default_exclusion_dictionary = true
 
