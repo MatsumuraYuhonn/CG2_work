@@ -232,7 +232,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	hr = device->CreateFence(fenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 	assert(SUCCEEDED(hr));
 
-	// フェンス用のイベントを作成
 	HANDLE fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 	assert(fenceEvent != nullptr);
 
@@ -240,7 +239,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	// コマンドを積み込んで確定させる
 	UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
-	// ① 表示状態（PRESENT）から書き込み状態（RENDER_TARGET）へ遷移
 	D3D12_RESOURCE_BARRIER barrier{};
 	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -251,12 +249,10 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	commandList->ResourceBarrier(1, &barrier);
 
-	// ② レンダーターゲットを設定して画面クリア
 	commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, nullptr);
 	float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
 	commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
 
-	// ③ 書き込み状態（RENDER_TARGET）から表示状態（PRESENT）へ戻す
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 
@@ -276,14 +272,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	fenceValue++;
 
 
-	// GPUに対して、「ここまで処理が終わったら、フェンスの値を fenceValue に書き換えてね」とお願いする
 	commandQueue->Signal(fence, fenceValue);
 
-	// CPU側で、フェンスの値が指定した値（fenceValue）になるまで待つ
 	if (fence->GetCompletedValue() < fenceValue) {
-		// 指定した値になったら fenceEvent を発火させるよう設定
+
 		fence->SetEventOnCompletion(fenceValue, fenceEvent);
-		// イベントが発火するまでスレッド（CPU）をストップして待機
+
 		WaitForSingleObject(fenceEvent, INFINITE);
 	}
 
