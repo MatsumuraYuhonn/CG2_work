@@ -18,6 +18,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	createLogFile();
 
+	Log("String\n");
 
 	HWND hwnd = CreateGameWindow();
 
@@ -253,14 +254,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	hr = commandList->Reset(commandAllocator, nullptr);
 	assert(SUCCEEDED(hr));
-
-
-
-
-
-
-
-
 
 
 	// メインループ
