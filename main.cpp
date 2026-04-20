@@ -155,7 +155,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 
 	// コマンドリストの作成
-
 	ID3D12GraphicsCommandList* commandList = nullptr;
 
 	hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
@@ -208,7 +207,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 
 	// RTVの作成
-
 	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
 
 	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
@@ -228,17 +226,43 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	device->CreateRenderTargetView(swapChainResources[1], &rtvDesc, rtvHandles[1]);
 
 
+	// フェンスの作成
+	ID3D12Fence* fence = nullptr;
+	uint64_t fenceValue = 0;
+	hr = device->CreateFence(fenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+	assert(SUCCEEDED(hr));
+
+	// フェンス用のイベントを作成
+	HANDLE fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	assert(fenceEvent != nullptr);
+
+
 	// コマンドを積み込んで確定させる
 	UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
+	// ① 表示状態（PRESENT）から書き込み状態（RENDER_TARGET）へ遷移
+	D3D12_RESOURCE_BARRIER barrier{};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	barrier.Transition.pResource = swapChainResources[backBufferIndex];
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+	commandList->ResourceBarrier(1, &barrier);
+
+	// ② レンダーターゲットを設定して画面クリア
 	commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, nullptr);
-
 	float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
-
 	commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
 
-	hr = commandList->Close();
+	// ③ 書き込み状態（RENDER_TARGET）から表示状態（PRESENT）へ戻す
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 
+	commandList->ResourceBarrier(1, &barrier);
+
+	hr = commandList->Close();
 	assert(SUCCEEDED(hr));
 
 
@@ -248,6 +272,21 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	commandQueue->ExecuteCommandLists(1, commandLists);
 
 	swapChain->Present(1, 0);
+
+	fenceValue++;
+
+
+	// GPUに対して、「ここまで処理が終わったら、フェンスの値を fenceValue に書き換えてね」とお願いする
+	commandQueue->Signal(fence, fenceValue);
+
+	// CPU側で、フェンスの値が指定した値（fenceValue）になるまで待つ
+	if (fence->GetCompletedValue() < fenceValue) {
+		// 指定した値になったら fenceEvent を発火させるよう設定
+		fence->SetEventOnCompletion(fenceValue, fenceEvent);
+		// イベントが発火するまでスレッド（CPU）をストップして待機
+		WaitForSingleObject(fenceEvent, INFINITE);
+	}
+
 
 	hr = commandAllocator->Reset();
 	assert(SUCCEEDED(hr));
