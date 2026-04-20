@@ -2,13 +2,14 @@
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include<cassert>
+#include<dxgidebug.h>
 #include "Logger.h"
 #include "Window.h"
 #include "CrashHandler.h"
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
-
+#pragma comment(lib, "dxguid.lib")
 
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
@@ -107,7 +108,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
 		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
-		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
+		//infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
 		
 		D3D12_MESSAGE_ID denyIds[] = {
 
@@ -309,6 +310,37 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 
 		}
+	}
+
+
+	CloseHandle(fenceEvent);
+	fence->Release();
+	rtvDescriptorHeap->Release();
+	swapChainResources[0]->Release();
+	swapChainResources[1]->Release();
+	swapChain->Release();
+	commandList->Release();
+	commandAllocator->Release();
+	commandQueue->Release();
+	device->Release();
+	useAdapter->Release();
+#ifdef _DEBUG
+
+	debugController->Release();
+
+#endif 
+	CloseWindow(hwnd);
+
+
+	//	リソースリークチェック
+	IDXGIDebug1* debug;
+
+	if(SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
+
+		debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+		debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
+		debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
+		debug->Release();
 	}
 
 	return 0;
