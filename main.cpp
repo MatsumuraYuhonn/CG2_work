@@ -20,6 +20,134 @@ struct Vector4 {
 	float z;
 };
 
+struct Vector3 {
+	float x;
+	float y;
+	float z;
+};
+
+struct Matrix4x4 {
+	float m[4][4];
+};
+
+struct Transform {
+	Vector3 scale;
+	Vector3 rotate;
+	Vector3 translate;
+};
+
+Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rot, const Vector3& translate) {
+	Matrix4x4 result = {};
+
+	// 回転の計算 (ラジアン角)
+	float sinX = std::sin(rot.x);
+	float cosX = std::cos(rot.x);
+	float sinY = std::sin(rot.y);
+	float cosY = std::cos(rot.y);
+	float sinZ = std::sin(rot.z);
+	float cosZ = std::cos(rot.z);
+
+	// X軸 → Y軸 → Z軸の順で回転させた場合のアフィン変換行列
+	// (Scale * Rotate * Translate)
+	result.m[0][0] = scale.x * (cosY * cosZ + sinX * sinY * sinZ);
+	result.m[0][1] = scale.x * (sinX * sinY * cosZ - cosY * sinZ);
+	result.m[0][2] = scale.x * (cosX * sinY);
+	result.m[0][3] = 0.0f;
+
+	result.m[1][0] = scale.y * (cosX * sinZ);
+	result.m[1][1] = scale.y * (cosX * cosZ);
+	result.m[1][2] = scale.y * (-sinX);
+	result.m[1][3] = 0.0f;
+
+	result.m[2][0] = scale.z * (sinX * cosY * sinZ - sinY * cosZ);
+	result.m[2][1] = scale.z * (sinX * cosY * cosZ + sinY * sinZ);
+	result.m[2][2] = scale.z * (cosX * cosY);
+	result.m[2][3] = 0.0f;
+
+	// 平行移動
+	result.m[3][0] = translate.x;
+	result.m[3][1] = translate.y;
+	result.m[3][2] = translate.z;
+	result.m[3][3] = 1.0f;
+
+	return result;
+}
+
+Matrix4x4 Multiply(const Matrix4x4& m1, const Matrix4x4& m2) {
+	Matrix4x4 result = {};
+	for (int i = 0; i < 4; ++i) {
+		for (int j = 0; j < 4; ++j) {
+			result.m[i][j] = m1.m[i][0] * m2.m[0][j] +
+				m1.m[i][1] * m2.m[1][j] +
+				m1.m[i][2] * m2.m[2][j] +
+				m1.m[i][3] * m2.m[3][j];
+		}
+	}
+	return result;
+}
+
+Matrix4x4 MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip, float farClip) {
+	Matrix4x4 result = {};
+
+	float cot = 1.0f / std::tan(fovY / 2.0f);
+
+	result.m[0][0] = cot / aspectRatio;
+	result.m[1][1] = cot;
+	result.m[2][2] = farClip / (farClip - nearClip);
+	result.m[2][3] = 1.0f;
+	result.m[3][2] = -(nearClip * farClip) / (farClip - nearClip);
+	result.m[3][3] = 0.0f;
+
+	return result;
+}
+
+Matrix4x4 Inverse(const Matrix4x4& m) {
+	Matrix4x4 result = {};
+
+	float b00 = m.m[0][0] * m.m[1][1] - m.m[0][1] * m.m[1][0];
+	float b01 = m.m[0][0] * m.m[1][2] - m.m[0][2] * m.m[1][0];
+	float b02 = m.m[0][0] * m.m[1][3] - m.m[0][3] * m.m[1][0];
+	float b03 = m.m[0][1] * m.m[1][2] - m.m[0][2] * m.m[1][1];
+	float b04 = m.m[0][1] * m.m[1][3] - m.m[0][3] * m.m[1][1];
+	float b05 = m.m[0][2] * m.m[1][3] - m.m[0][3] * m.m[1][2];
+	float b06 = m.m[2][0] * m.m[3][1] - m.m[2][1] * m.m[3][0];
+	float b07 = m.m[2][0] * m.m[3][2] - m.m[2][2] * m.m[3][0];
+	float b08 = m.m[2][0] * m.m[3][3] - m.m[2][3] * m.m[3][0];
+	float b09 = m.m[2][1] * m.m[3][2] - m.m[2][2] * m.m[3][1];
+	float b10 = m.m[2][1] * m.m[3][3] - m.m[2][3] * m.m[3][1];
+	float b11 = m.m[2][2] * m.m[3][3] - m.m[2][3] * m.m[3][2];
+
+	float det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+
+	if (det == 0.0f) {
+		return result;
+	}
+
+	float invDet = 1.0f / det;
+
+	result.m[0][0] = (m.m[1][1] * b11 - m.m[1][2] * b10 + m.m[1][3] * b09) * invDet;
+	result.m[0][1] = (-m.m[0][1] * b11 + m.m[0][2] * b10 - m.m[0][3] * b09) * invDet;
+	result.m[0][2] = (m.m[3][1] * b05 - m.m[3][2] * b04 + m.m[3][3] * b03) * invDet;
+	result.m[0][3] = (-m.m[2][1] * b05 + m.m[2][2] * b04 - m.m[2][3] * b03) * invDet;
+
+	result.m[1][0] = (-m.m[1][0] * b11 + m.m[1][2] * b08 - m.m[1][3] * b07) * invDet;
+	result.m[1][1] = (m.m[0][0] * b11 - m.m[0][2] * b08 + m.m[0][3] * b07) * invDet;
+	result.m[1][2] = (-m.m[3][0] * b05 + m.m[3][2] * b02 - m.m[3][3] * b01) * invDet;
+	result.m[1][3] = (m.m[2][0] * b05 - m.m[2][2] * b02 + m.m[2][3] * b01) * invDet;
+
+	result.m[2][0] = (m.m[1][0] * b10 - m.m[1][1] * b08 + m.m[1][3] * b06) * invDet;
+	result.m[2][1] = (-m.m[0][0] * b10 + m.m[0][1] * b08 - m.m[0][3] * b06) * invDet;
+	result.m[2][2] = (m.m[3][0] * b04 - m.m[3][1] * b02 + m.m[3][3] * b00) * invDet;
+	result.m[2][3] = (-m.m[2][0] * b04 + m.m[2][1] * b02 - m.m[2][3] * b00) * invDet;
+
+	result.m[3][0] = (-m.m[1][0] * b09 + m.m[1][1] * b07 - m.m[1][2] * b06) * invDet;
+	result.m[3][1] = (m.m[0][0] * b09 - m.m[0][1] * b07 + m.m[0][2] * b06) * invDet;
+	result.m[3][2] = (-m.m[3][0] * b03 + m.m[3][1] * b01 - m.m[3][2] * b00) * invDet;
+	result.m[3][3] = (m.m[2][0] * b03 - m.m[2][1] * b01 + m.m[2][2] * b00) * invDet;
+
+	return result;
+}
+
 IDxcBlob* CompileShader(const std::wstring& filePath, const wchar_t* profile, IDxcUtils* dxcUtils,
 	IDxcCompiler3* dxcCompiler, IDxcIncludeHandler* includeHandler) {
 
@@ -120,6 +248,17 @@ ID3D12Resource* CreateBufferResource(ID3D12Device* device, size_t sizeInBytes) {
 	assert(SUCCEEDED(hr));
 
 	return bufferResource;
+}
+
+Matrix4x4 MakeIdentity4x4() {
+	Matrix4x4 result = {}; 
+
+	result.m[0][0] = 1.0f;
+	result.m[1][1] = 1.0f;
+	result.m[2][2] = 1.0f;
+	result.m[3][3] = 1.0f;
+
+	return result;
 }
 
 
@@ -354,7 +493,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
-	D3D12_ROOT_PARAMETER rootParameters[1] = {};
+	D3D12_ROOT_PARAMETER rootParameters[2] = {};
 
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 
@@ -362,9 +501,17 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	rootParameters[0].Descriptor.ShaderRegister = 0;
 
+	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+
+	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+
+	rootParameters[1].Descriptor.ShaderRegister = 0;
+
 	descriptionRootSignature.pParameters = rootParameters;
 
 	descriptionRootSignature.NumParameters = _countof(rootParameters);
+
+
 
 
 
@@ -541,6 +688,16 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	*materialData = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 
 
+	// トランスフォーメーションマトリックス用のリソースを作る
+	ID3D12Resource* wvpResource = CreateBufferResource(device, sizeof(Matrix4x4));
+
+	Matrix4x4* wvpData = nullptr;
+
+	wvpResource->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
+
+	*wvpData = MakeIdentity4x4();
+
+
 	// ViewPortとScissorの設定
 
 	D3D12_VIEWPORT viewport{};
@@ -568,77 +725,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	scissorRect.bottom = kClientHeight;
 
-	// コマンドを積み込んで確定させる
-	UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+	
 
-	// バリアの設定
-	D3D12_RESOURCE_BARRIER barrier{};
-	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	barrier.Transition.pResource = swapChainResources[backBufferIndex];
-	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	// transform変数を作る
+	Transform transform{ {1.0f,1.0f,1.0f}, {0.0f,0.0f,0.0f},  {0.0f,0.0f,0.0f} };
 
-	commandList->ResourceBarrier(1, &barrier);
-
-	commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, nullptr);
-	float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
-	commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
-
-
-	// 描画コマンドを積む
-	commandList->RSSetViewports(1, &viewport);
-
-	commandList->RSSetScissorRects(1, &scissorRect);
-
-	commandList->SetGraphicsRootSignature(rootSignature);
-
-	commandList->SetPipelineState(graphicsPipelineState);
-
-	commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
-
-	commandList->DrawInstanced(3, 1, 0, 0);
-
-
-	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-
-	commandList->ResourceBarrier(1, &barrier);
-
-	hr = commandList->Close();
-	assert(SUCCEEDED(hr));
-
-
-	// コマンドをキックする
-	ID3D12CommandList* commandLists[] = { commandList };
-
-	commandQueue->ExecuteCommandLists(1, commandLists);
-
-	swapChain->Present(1, 0);
-
-
-	fenceValue++;
-
-	commandQueue->Signal(fence, fenceValue);
-
-	if (fence->GetCompletedValue() < fenceValue) {
-
-		fence->SetEventOnCompletion(fenceValue, fenceEvent);
-
-		WaitForSingleObject(fenceEvent, INFINITE);
-	}
-
-
-	hr = commandAllocator->Reset();
-	assert(SUCCEEDED(hr));
-
-	hr = commandList->Reset(commandAllocator, nullptr);
-	assert(SUCCEEDED(hr));
-
+	Transform cameraTransform{ {1.0f,1.0f,1.0f}, {0.0f,0.0f,0.0f},  {0.0f,0.0f,-5.0f} };
 
 
 	// メインループ
@@ -653,14 +745,102 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		else {
 
 			// ゲームの処理
+			transform.rotate.y += 0.03f;
+
+			
+
+			Vector3 cameraScale = { 1.0f, 1.0f, 1.0f };
+			Vector3 cameraRot = { 0.0f, 0.0f, 0.0f };
+			Vector3 cameraPos = { 0.0f, 0.0f, -5.0f }; 
+
+			Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+			Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
+			Matrix4x4 viewMatrix = Inverse(cameraMatrix);
+			Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
+			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
+	
+			*wvpData = worldViewProjectionMatrix;
 
 
+			// コマンドを積み込んで確定させる
+			UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+
+			// バリアの設定
+			D3D12_RESOURCE_BARRIER barrier{};
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition.pResource = swapChainResources[backBufferIndex];
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+			commandList->ResourceBarrier(1, &barrier);
+
+			commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, nullptr);
+			float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
+			commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
+
+
+			// 描画コマンドを積む
+			commandList->RSSetViewports(1, &viewport);
+
+			commandList->RSSetScissorRects(1, &scissorRect);
+
+			commandList->SetGraphicsRootSignature(rootSignature);
+
+			commandList->SetPipelineState(graphicsPipelineState);
+
+			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+
+			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
+
+			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
+
+			commandList->DrawInstanced(3, 1, 0, 0);
+
+
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+
+			commandList->ResourceBarrier(1, &barrier);
+
+			hr = commandList->Close();
+			assert(SUCCEEDED(hr));
+
+
+			// コマンドをキックする
+			ID3D12CommandList* commandLists[] = { commandList };
+
+			commandQueue->ExecuteCommandLists(1, commandLists);
+
+			swapChain->Present(1, 0);
+
+
+			fenceValue++;
+
+			commandQueue->Signal(fence, fenceValue);
+
+			if (fence->GetCompletedValue() < fenceValue) {
+
+				fence->SetEventOnCompletion(fenceValue, fenceEvent);
+
+				WaitForSingleObject(fenceEvent, INFINITE);
+			}
+
+
+			hr = commandAllocator->Reset();
+			assert(SUCCEEDED(hr));
+
+			hr = commandList->Reset(commandAllocator, nullptr);
+			assert(SUCCEEDED(hr));
 
 		}
 	}
 
 
 	materialResource->Release();
+	wvpResource->Release();
 	vertexResource->Release();
 	graphicsPipelineState->Release();
 	pixelShaderBlob->Release();
