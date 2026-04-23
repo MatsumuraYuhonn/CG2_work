@@ -613,40 +613,35 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	}
 
 
+	vertexResource->Release();
+	graphicsPipelineState->Release();
+	pixelShaderBlob->Release();
+	vertexShaderBlob->Release();
+	rootSignature->Release();
+	if (errorBlob) {
+		errorBlob->Release();
+	}
+	signatureBlob->Release();
 	CloseHandle(fenceEvent);
 	fence->Release();
-	rtvDescriptorHeap->Release();
-	swapChainResources[0]->Release();
 	swapChainResources[1]->Release();
+	swapChainResources[0]->Release();
+	rtvDescriptorHeap->Release();
 	swapChain->Release();
 	commandList->Release();
 	commandAllocator->Release();
 	commandQueue->Release();
-	device->Release();
 	useAdapter->Release();
 	dxgiFactory->Release();
+
 #ifdef _DEBUG
-
 	debugController->Release();
-
 #endif 
-	vertexResource->Release();
-	graphicsPipelineState->Release();
-	signatureBlob->Release();
-	if (errorBlob) {
-		errorBlob->Release();
-	}
-	rootSignature->Release();
-	pixelShaderBlob->Release();
-	vertexShaderBlob->Release();
+
 	CloseWindow(hwnd);
 
-
-	//	リソースリークチェック
 	IDXGIDebug1* debug;
-
-	if(SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
-
+	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
 		debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
 		debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
 		debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
