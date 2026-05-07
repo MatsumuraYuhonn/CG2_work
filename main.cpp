@@ -1184,6 +1184,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	materialResource->Release();
 	wvpResource->Release();
 	vertexResource->Release();
+	vertexResourceSprite->Release();
+	transformationMatrixResourceSprite->Release();
 	graphicsPipelineState->Release();
 	pixelShaderBlob->Release();
 	vertexShaderBlob->Release();
