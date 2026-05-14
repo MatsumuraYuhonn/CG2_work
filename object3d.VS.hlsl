@@ -8,7 +8,10 @@ struct TranceformationMatrix {
     
 };
 
-ConstantBuffer<TranceformationMatrix> gTranceformationMatrix : register(b0);
+
+ConstantBuffer<TranceformationMatrix> gTranceformationMatrix : register(b1);
+
+ConstantBuffer<Material> gMaterial : register(b0); 
 
 struct VertexShaderInput
 {
@@ -27,7 +30,7 @@ VertexShaderOutput main(VertexShaderInput input) {
     
     output.position = mul(input.position, gTranceformationMatrix.WVP);
     
-    output.texcoord = input.texcoord;
+    output.texcoord = TransformUV(input.texcoord, gMaterial.uvTransform);
     
     output.normal = normalize(mul(input.normal, (float3x3) gTranceformationMatrix.World));
     

@@ -1,14 +1,5 @@
 #include "object3d.hlsli"
 
-struct Material
-{
-    
-    float4 color;
-  
-    int enabledLighting;
-    
-};
-
 struct DirectionalLight
 {
     float4 color;
