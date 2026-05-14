@@ -4,4 +4,8 @@ struct VertexShaderOutput
     
     float2 texcoord : TEXCOORD0;
     
+    float3 normal : NORMAL0;
+    
 };
+
+
