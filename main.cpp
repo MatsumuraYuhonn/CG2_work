@@ -8,6 +8,8 @@
 #include "Logger.h"
 #include "Window.h"
 #include "CrashHandler.h"
+#include<fstream>
+#include<sstream>
 
 #include"externals/DirectXTex/DirectXTex.h"
 #include"externals/DirectXTex/d3dx12.h"
@@ -71,6 +73,15 @@ struct Material {
 	int32_t enabledLighting;
 	float padding[3];
 	Matrix4x4 uvTransform;
+};
+
+struct  MaterialData {
+	std::string textureFilePath;
+};
+
+struct ModelData {
+	std::vector<VertexData> vertices;
+	MaterialData material;
 };
 
 
@@ -490,6 +501,130 @@ D3D12_GPU_DESCRIPTOR_HANDLE getGPUDescriptorHandle(ID3D12DescriptorHeap* descrip
 inline size_t AlignForConstantBuffer(size_t size) {
 	return (size + 255) & ~255;
 }
+
+MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename) {
+
+	MaterialData materialData;
+
+	std::string line;
+	std::ifstream file(directoryPath + "/" + filename);
+
+	assert(file.is_open());
+
+
+	while (std::getline(file, line)) {
+
+		std::string identifier;
+		std::istringstream s(line);
+		s >> identifier;
+
+		if (identifier == "map_Kd") {
+
+			std::string textureFilename;
+			s >> textureFilename;
+
+			materialData.textureFilePath = directoryPath + "/" + textureFilename;
+
+		}
+
+	}
+
+	return materialData;
+
+}
+
+ModelData LoadobjFile(const std::string& directoryPath, const std::string& filename) {
+
+	ModelData modelData;
+
+	std::vector<Vector4>positions;
+	std::vector<Vector3>normals;
+	std::vector<Vector2>texcoords;
+	std::string line;
+
+
+	std::ifstream file(directoryPath + "/" + filename);
+	assert(file.is_open());
+
+
+	while (std::getline(file, line)) {
+
+		std::string identifier;
+		std::istringstream s(line);
+		s >> identifier;
+
+
+		if (identifier == "v") {
+
+			Vector4 position;
+			s >> position.x >> position.y >> position.z;
+			position.w = 1.0f;
+			positions.push_back(position);
+
+		} else if (identifier == "vt") {
+
+			Vector2 texcoord;
+			s >> texcoord.x >> texcoord.y;
+			texcoord.y = 1.0f - texcoord.y;
+			texcoords.push_back(texcoord);
+
+		} else if (identifier == "vn") {
+
+			Vector3 normal;
+			s >> normal.x >> normal.y >> normal.z;
+			normals.push_back(normal);
+
+		} else if (identifier == "f") {
+
+			VertexData triangle[3];
+
+			for (int32_t faceVertex = 0; faceVertex < 3; ++faceVertex) {
+
+				std::string vertexDefiniton;
+				s >> vertexDefiniton;
+
+				std::istringstream v(vertexDefiniton);
+				uint32_t elementIndices[3];
+
+				for (int32_t element = 0; element < 3; ++element) {
+
+					std::string index;
+					std::getline(v, index, '/');
+					elementIndices[element] = std::stoi(index);
+
+				}
+
+				Vector4 position = positions[elementIndices[0] - 1];
+				Vector2 texcoord = texcoords[elementIndices[1] - 1];
+				Vector3 normal = normals[elementIndices[2] - 1];
+				//VertexData vertex = { position, texcoord, normal };
+				//modelData.vertices.push_back(vertex);
+
+				position.x *= -1.0f;
+				normal.x *= -1.0f;
+
+				triangle[faceVertex] = { position, texcoord, normal };
+
+			}
+
+			modelData.vertices.push_back(triangle[2]);
+			modelData.vertices.push_back(triangle[1]);
+			modelData.vertices.push_back(triangle[0]);
+
+		} else if (identifier == "mtllib") {
+
+			std::string materialFilename;
+			s >> materialFilename;
+
+			modelData.material = LoadMaterialTemplateFile(directoryPath, materialFilename);
+
+		}
+
+	}
+
+	return modelData;
+}
+
 
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
@@ -917,25 +1052,25 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 
 	// 頂点リソース用のヒープの設定
-	D3D12_HEAP_PROPERTIES uploadHeapProperties{};
+	//D3D12_HEAP_PROPERTIES uploadHeapProperties{};
 
-	uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
+	//uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
 
-	D3D12_RESOURCE_DESC vertexResourceDesc{};
+	//D3D12_RESOURCE_DESC vertexResourceDesc{};
 
-	vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	//vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 
-	vertexResourceDesc.Width = sizeof(VertexData) * 3;
+	//vertexResourceDesc.Width = sizeof(VertexData) * 3;
 
-	vertexResourceDesc.Height = 1;
+	//vertexResourceDesc.Height = 1;
 
-	vertexResourceDesc.DepthOrArraySize = 1;
+	//vertexResourceDesc.DepthOrArraySize = 1;
 
-	vertexResourceDesc.MipLevels = 1;
+	//vertexResourceDesc.MipLevels = 1;
 
-	vertexResourceDesc.SampleDesc.Count = 1;
+	//vertexResourceDesc.SampleDesc.Count = 1;
 
-	vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	//vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
 
 	const uint32_t kSubdivision = 16;
@@ -943,13 +1078,30 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	const uint32_t kIndexCountSphere = kSubdivision * kSubdivision * 6;
 
 	//　球体用の頂点リソース
-	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * kVertexCountSphere);
+	//ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * kVertexCountSphere);
+
+	//D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
+
+	//vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
+	//vertexBufferView.SizeInBytes = sizeof(VertexData) * kVertexCountSphere;
+	//vertexBufferView.StrideInBytes = sizeof(VertexData);
+
+
+	// モデルを読み込む
+	ModelData modelData = LoadobjFile("Resources", "axis.obj");
+
+	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
+
 
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
 
 	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
-	vertexBufferView.SizeInBytes = sizeof(VertexData) * kVertexCountSphere;
+	vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * modelData.vertices.size());
 	vertexBufferView.StrideInBytes = sizeof(VertexData);
+
+	VertexData* vertexData = nullptr;
+	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+	std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData)* modelData.vertices.size());
 
 
 	// 球体用のインデックスリソース
@@ -962,10 +1114,11 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 
 	// 頂点データの書き込み
-	VertexData* vertexData = nullptr;
-	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+	//VertexData* vertexData = nullptr;
+	//vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 
-	const float pi = 3.1415926535f;
+
+	/*const float pi = 3.1415926535f;
 	for (uint32_t latIndex = 0; latIndex <= kSubdivision; ++latIndex) {
 
 		float lat = -pi / 2.0f + (pi / float(kSubdivision)) * latIndex;
@@ -1001,7 +1154,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	indexResourceSphere->Unmap(0, nullptr);
 
-
+	*/
 
 
 
@@ -1098,7 +1251,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 
 	// トランスフォーメーションマトリックス用のリソースを作る
-	ID3D12Resource* wvpResource = CreateBufferResource(device, AlignForConstantBuffer(sizeof(Matrix4x4)));
+	ID3D12Resource* wvpResource = CreateBufferResource(device, AlignForConstantBuffer(sizeof(TransformationMatrix)));
 
 	TransformationMatrix* wvpData = nullptr;
 
@@ -1127,7 +1280,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 
 	// 2枚目のtextureを読む
-	DirectX::ScratchImage mipImages2 = LoadTexture("resources/monsterBall.png");
+	DirectX::ScratchImage mipImages2 = LoadTexture(modelData.material.textureFilePath);
 
 	const DirectX::TexMetadata& metadata2 = mipImages2.GetMetadata();
 
@@ -1252,7 +1405,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 #endif
 
 			// ゲームの処理
-			transform.rotate.y += 0.03f;
+			//transform.rotate.y += 0.03f;
 
 			Vector3 cameraScale = { 1.0f, 1.0f, 1.0f };
 			Vector3 cameraRot = { 0.0f, 0.0f, 0.0f };
@@ -1318,6 +1471,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			ImGui::DragFloat2("UVScale", &uvTransformSprite.scale.x, 0.01f, -10.0f, 10.0f);
 			ImGui::SliderAngle("UVRotate", &uvTransformSprite.rotate.z);
 
+			
+			ImGui::Text("Model Transform");
+			ImGui::DragFloat3("Model Scale", &transform.scale.x, 0.01f);
+			ImGui::DragFloat3("Model Rotate", &transform.rotate.x, 0.01f); // これでモデルが回転可能になる
+			ImGui::DragFloat3("Model Translate", &transform.translate.x, 0.1f);
+
 
 			ImGui::End();
 			
@@ -1374,13 +1533,15 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 			// --- 球体の描画 ---
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-			commandList->IASetIndexBuffer(&indexBufferViewSphere);
+			//commandList->IASetIndexBuffer(&indexBufferViewSphere);
 			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
 			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
 
 			commandList->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
 			commandList->SetGraphicsRootConstantBufferView(3, directionalLightResource->GetGPUVirtualAddress());
-			commandList->DrawIndexedInstanced(kIndexCountSphere, 1, 0, 0, 0);
+			//commandList->DrawIndexedInstanced(kIndexCountSphere, 1, 0, 0, 0);
+
+			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
 
 			// --- スプライトの描画 ---
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);
