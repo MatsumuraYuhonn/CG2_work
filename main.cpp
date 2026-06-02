@@ -1398,7 +1398,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 				uvTransformMatrix = Multiply(uvTransformMatrix, MakeTranslateMatrix(uvTransformSprite.translate));
 				materialDataSprite->uvTransform = uvTransformMatrix;
 
-
 #ifdef USE_IMGUI
 
 				ImGui::Begin("Debug Settings");
