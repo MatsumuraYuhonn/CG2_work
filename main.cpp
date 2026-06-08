@@ -8,6 +8,10 @@
 #include "Logger.h"
 #include "Window.h"
 #include "CrashHandler.h"
+#include<xaudio2.h>
+#pragma comment(lib, "xaudio2.lib")
+#include<fstream>
+
 
 #include"externals/DirectXTex/DirectXTex.h"
 #include"externals/DirectXTex/d3dx12.h"
@@ -18,10 +22,10 @@
 #pragma comment(lib, "dxcompiler.lib")
 
 struct Vector4 {
-	float w;
 	float x;
 	float y;
 	float z;
+	float w;
 };
 
 struct Vector3 {
@@ -48,6 +52,10 @@ struct Transform {
 struct VertexData {
 	Vector4 position;
 	Vector2 texcoord;
+};
+
+struct Material {
+	Vector4 color;
 };
 
 Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rot, const Vector3& translate) {
@@ -672,6 +680,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	assert(fenceEvent != nullptr);
 
 
+
 	// rootSignatureの作成
 	D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
 
@@ -1030,11 +1039,13 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	Transform transformB{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.5f, 0.0f, 0.0f} };
 
 
-	// の変数
 	bool drawTwoTriangles = true;
 
+	float time = 0.0f;
 
+	bool isAnimationEnabled = false;
 
+	bool isStatusReset = true;
 
 #ifdef USE_IMGUI
 
@@ -1082,7 +1093,11 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			ImGui::Checkbox("Draw Two Triangles", &drawTwoTriangles);
 			
 			ImGui::Checkbox("useMonsterBall", &useMonsterBall);
+
+			ImGui::ColorEdit4("Material Color", &materialData->x);
 			
+			ImGui::Checkbox("Enable Animation", &isAnimationEnabled);
+
 			ImGui::End();
 
 
@@ -1114,6 +1129,42 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 			*wvpDataA = wvpMatrixA;
 			*wvpDataB = wvpMatrixB;
+
+
+			if (isAnimationEnabled) {
+
+				if (isStatusReset) {
+					transformA.translate = { 0.0f, 0.0f, 0.0f };
+					transformA.rotate = { 0.0f, 0.0f, 0.0f };
+					transformA.scale = { 1.0f, 1.0f, 1.0f };
+					time = 0.0f; // 必要であれば時間もリセット
+
+					isStatusReset = false;
+				}
+
+				time += 0.1f;
+				drawTwoTriangles = false;
+
+				// 毎フレーム変化させる値
+				transformA.rotate.z = time;
+				transformA.translate.z -= 0.05f;
+				
+
+			}else {
+
+				if (!isStatusReset) {
+
+					transformA.rotate.z = 0.0f;
+
+					transformA.translate.z = 0.0f;
+
+					time += 0.0f;
+
+					isStatusReset = true;
+
+				}
+
+			}
 
 
 #ifdef USE_IMGUI
