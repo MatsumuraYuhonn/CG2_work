@@ -11,6 +11,10 @@
 #include<fstream>
 #include<sstream>
 #include<wrl.h>
+#include<xaudio2.h>
+#pragma comment(lib, "xaudio2.lib")
+#include<fstream>
+
 
 #include"externals/DirectXTex/DirectXTex.h"
 #include"externals/DirectXTex/d3dx12.h"
@@ -97,6 +101,27 @@ struct ModelData {
 	MaterialData material;
 };
 
+struct ChunkHeader {
+	char id[4];
+	int32_t size;
+};
+
+struct RiffHeader {
+	ChunkHeader chunk;
+	char type[4];
+};
+
+struct FormatChunk {
+	ChunkHeader chunk;
+	WAVEFORMATEX fmt;
+};
+
+struct SoundData {
+	WAVEFORMATEX wfex;
+	BYTE* pBUffer;
+	unsigned int bufferSize;
+};
+
 class ResourceObject {
 
 public:
@@ -104,8 +129,8 @@ public:
 	ResourceObject(Microsoft::WRL::ComPtr <ID3D12Resource> resource) :resource_(resource) {}
 
 	~ResourceObject() {
-	
-		
+
+
 
 	};
 
@@ -138,7 +163,7 @@ Matrix4x4 MakeScaleMatrix(const Vector3& scale) {
 }
 
 Matrix4x4 MakeRotateZMatrix(float theta) {
-	Matrix4x4 result = MakeIdentity4x4(); 
+	Matrix4x4 result = MakeIdentity4x4();
 	result.m[0][0] = std::cos(theta);
 	result.m[0][1] = std::sin(theta);
 	result.m[1][0] = -std::sin(theta);
@@ -147,7 +172,7 @@ Matrix4x4 MakeRotateZMatrix(float theta) {
 }
 
 Matrix4x4 MakeTranslateMatrix(const Vector3& translate) {
-	Matrix4x4 result = MakeIdentity4x4(); 
+	Matrix4x4 result = MakeIdentity4x4();
 	result.m[3][0] = translate.x;
 	result.m[3][1] = translate.y;
 	result.m[3][2] = translate.z;
@@ -348,7 +373,7 @@ Microsoft::WRL::ComPtr <ID3D12Resource> CreateBufferResource(Microsoft::WRL::Com
 
 	D3D12_RESOURCE_DESC bufferResourceDesc{};
 	bufferResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	bufferResourceDesc.Width = sizeInBytes; 
+	bufferResourceDesc.Width = sizeInBytes;
 	bufferResourceDesc.Height = 1;
 	bufferResourceDesc.DepthOrArraySize = 1;
 	bufferResourceDesc.MipLevels = 1;
@@ -370,7 +395,7 @@ Microsoft::WRL::ComPtr <ID3D12Resource> CreateBufferResource(Microsoft::WRL::Com
 }
 
 Microsoft::WRL::ComPtr <ID3D12DescriptorHeap> CreateDescriptorHeap(Microsoft::WRL::ComPtr <ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible) {
-	
+
 	Microsoft::WRL::ComPtr <ID3D12DescriptorHeap> descriptorHeap = nullptr;
 	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc{};
 	descriptorHeapDesc.Type = heapType;
@@ -383,7 +408,7 @@ Microsoft::WRL::ComPtr <ID3D12DescriptorHeap> CreateDescriptorHeap(Microsoft::WR
 
 // Textureデータを読む
 DirectX::ScratchImage LoadTexture(const std::string& filePath) {
-	
+
 	DirectX::ScratchImage image{};
 
 	std::wstring filePathw = ConvertString(filePath);
@@ -404,7 +429,7 @@ DirectX::ScratchImage LoadTexture(const std::string& filePath) {
 
 // TextureResourceを作る
 Microsoft::WRL::ComPtr <ID3D12Resource> CreateTextureResource(Microsoft::WRL::ComPtr <ID3D12Device> device, const DirectX::TexMetadata& metadata) {
-	
+
 
 	// metadataをもとにresourceの設定
 	D3D12_RESOURCE_DESC resourceDesc{};
@@ -466,30 +491,30 @@ Microsoft::WRL::ComPtr <ID3D12Resource> UploadTextureData(Microsoft::WRL::ComPtr
 Microsoft::WRL::ComPtr <ID3D12Resource> CreateDepthStencilTextureResource(Microsoft::WRL::ComPtr <ID3D12Device> device, int32_t width, int32_t height) {
 
 	D3D12_RESOURCE_DESC resourceDesc{};
-	resourceDesc.Width = width; 
+	resourceDesc.Width = width;
 	resourceDesc.Height = height;
 	resourceDesc.MipLevels = 1;
 	resourceDesc.DepthOrArraySize = 1;
-	resourceDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; 
+	resourceDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	resourceDesc.SampleDesc.Count = 1;
-	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D; 
-	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL; 
+	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
 
 	D3D12_HEAP_PROPERTIES heapProperties{};
-	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT; 
+	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
 
 
 	D3D12_CLEAR_VALUE depthClearValue{};
-	depthClearValue.DepthStencil.Depth = 1.0f; 
-	depthClearValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; 
+	depthClearValue.DepthStencil.Depth = 1.0f;
+	depthClearValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 	Microsoft::WRL::ComPtr <ID3D12Resource> resource = nullptr;
 	HRESULT hr = device->CreateCommittedResource(
 		&heapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&resourceDesc,
-		D3D12_RESOURCE_STATE_DEPTH_WRITE, 
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
 		&depthClearValue,
 		IID_PPV_ARGS(&resource)
 	);
@@ -593,20 +618,23 @@ ModelData LoadobjFile(const std::string& directoryPath, const std::string& filen
 			position.w = 1.0f;
 			positions.push_back(position);
 
-		} else if (identifier == "vt") {
+		}
+		else if (identifier == "vt") {
 
 			Vector2 texcoord;
 			s >> texcoord.x >> texcoord.y;
 			texcoord.y = 1.0f - texcoord.y;
 			texcoords.push_back(texcoord);
 
-		} else if (identifier == "vn") {
+		}
+		else if (identifier == "vn") {
 
 			Vector3 normal;
 			s >> normal.x >> normal.y >> normal.z;
 			normals.push_back(normal);
 
-		} else if (identifier == "f") {
+		}
+		else if (identifier == "f") {
 
 			VertexData triangle[3];
 
@@ -643,7 +671,8 @@ ModelData LoadobjFile(const std::string& directoryPath, const std::string& filen
 			modelData.vertices.push_back(triangle[1]);
 			modelData.vertices.push_back(triangle[0]);
 
-		} else if (identifier == "mtllib") {
+		}
+		else if (identifier == "mtllib") {
 
 			std::string materialFilename;
 			s >> materialFilename;
@@ -657,6 +686,102 @@ ModelData LoadobjFile(const std::string& directoryPath, const std::string& filen
 	return modelData;
 }
 
+SoundData SoundLoadWave(const char* filename) {
+
+	//HRESULT result;
+
+	// ファイルオープン
+	std::ifstream file;
+
+	file.open(filename, std::ios_base::binary);
+
+	assert(file.is_open());
+
+
+	// .wavデータ読み込み
+	RiffHeader riff;
+
+	file.read((char*)&riff, sizeof(riff));
+
+	if (strncmp(riff.chunk.id, "RIFF", 4) != 0) {
+		assert(false);
+	}
+
+	if (strncmp(riff.chunk.id, "WAVE", 4) != 0) {
+		assert(false);
+	}
+
+
+	FormatChunk format = {};
+
+	file.read((char*)&format, sizeof(ChunkHeader));
+	if (strncmp(format.chunk.id, "fmt ", 4) != 0) {
+		assert(false);
+	}
+
+	assert(format.chunk.size <= sizeof(format.fmt));
+	file.read((char*)&format.fmt, format.chunk.size);
+
+
+	ChunkHeader data;
+	file.read((char*)&data, sizeof(data));
+
+	if (strncmp(data.id, "JUNK", 4) == 0) {
+
+		file.seekg(data.size, std::ios_base::cur);
+
+		file.read((char*)&data, sizeof(data));
+	}
+
+	if (strncmp(data.id, "data", 4) != 0) {
+		assert(false);
+	}
+
+	char* pBuffer = new char[data.size];
+	file.read(pBuffer, data.size);
+
+
+	file.close();
+
+
+	// 読み込んだ音声データをreturn
+	SoundData soundData = {};
+
+	soundData.wfex = format.fmt;
+	soundData.pBUffer = reinterpret_cast<BYTE*>(pBuffer);
+	soundData.bufferSize = data.size;
+
+	return soundData;
+
+}
+
+void SoundUnload(SoundData* soundData) {
+
+	delete[] soundData->pBUffer;
+
+	soundData->pBUffer = nullptr;
+	soundData->bufferSize = 0;
+	soundData->wfex = {};
+
+}
+
+void SoundPlayWave(IXAudio2* xAudio2, const SoundData* soundData) {
+
+	HRESULT result;
+
+	IXAudio2SourceVoice* pSourceVoice = nullptr;
+	result = xAudio2->CreateSourceVoice(&pSourceVoice, &soundData->wfex);
+	assert(SUCCEEDED(result));
+
+	XAUDIO2_BUFFER buf{};
+	buf.pAudioData = soundData->pBUffer;
+	buf.AudioBytes = soundData->bufferSize;
+	buf.Flags = XAUDIO2_END_OF_STREAM;
+
+	result = pSourceVoice->SubmitSourceBuffer(&buf);
+	result = pSourceVoice->Start();
+
+}
 
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
@@ -1333,6 +1458,16 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		{ 0.0f, 0.0f, 0.0f },
 		};
 
+		// オーディオ用変数
+		Microsoft::WRL::ComPtr<IXAudio2> xAudio2;
+
+		IXAudio2MasteringVoice* masterVoice;
+
+		HRESULT result = XAudio2Create(xAudio2.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
+
+		result = xAudio2->CreateMasteringVoice(&masterVoice);
+
+		SoundData soundData1 = SoundLoadWave("Resources/Alarm01.wav");
 
 #ifdef USE_IMGUI
 
@@ -1397,6 +1532,10 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 				uvTransformMatrix = Multiply(uvTransformMatrix, MakeRotateZMatrix(uvTransformSprite.rotate.z));
 				uvTransformMatrix = Multiply(uvTransformMatrix, MakeTranslateMatrix(uvTransformSprite.translate));
 				materialDataSprite->uvTransform = uvTransformMatrix;
+
+
+				SoundPlayWave(xAudio2.Get(), &soundData1);
+
 
 #ifdef USE_IMGUI
 
@@ -1555,22 +1694,27 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			}
 		}
 
+		xAudio2.Reset();
+		SoundUnload(&soundData1);
+
+
 	}
+
 
 #ifdef USE_IMGUI
 
-		ImGui_ImplWin32_Shutdown();
-		ImGui_ImplDX12_Shutdown();
-		ImGui::DestroyContext();
+	ImGui_ImplWin32_Shutdown();
+	ImGui_ImplDX12_Shutdown();
+	ImGui::DestroyContext();
 
 #endif
 
-		CoUninitialize();
+	CoUninitialize();
 
-		CloseWindow(hwnd);
+	CloseWindow(hwnd);
 
 
-		return 0;
+	return 0;
 
 
 }
