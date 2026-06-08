@@ -1037,7 +1037,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 		rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 
-		rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+		rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 		rootParameters[1].Descriptor.ShaderRegister = 1;
 
@@ -1056,8 +1056,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 
 		rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-		rootParameters[3].Descriptor.ShaderRegister = 1;
+		rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		rootParameters[3].Descriptor.ShaderRegister = 2;
 
 		descriptionRootSignature.pParameters = rootParameters;
 
@@ -1085,8 +1085,14 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		hr = D3D12SerializeRootSignature(&descriptionRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
 
 		if (FAILED(hr)) {
-
+			
 			Log(reinterpret_cast<char*>(errorBlob->GetBufferPointer()));
+
+			if (errorBlob) {
+				OutputDebugStringA(
+					reinterpret_cast<char*>(errorBlob->GetBufferPointer())
+				);
+			}
 
 			assert(false);
 
