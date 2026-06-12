@@ -797,8 +797,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	HRESULT hrCoInit = CoInitializeEx(0, COINIT_MULTITHREADED);
 	assert(SUCCEEDED(hrCoInit));
 
-
-
 	SetUnhandledExceptionFilter(ExportDump);
 
 	InitializeLogger();
@@ -823,11 +821,42 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 #endif
 
+	// DirectInputの初期化
+	IDirectInput* directInput = nullptr;
+
+	WNDCLASS w{};
+
+	HRESULT hr = DirectInput8Create(w.hInstance, DIRECTINPUT_VERSION, 
+		IID_IDirectInput8, (void**)&directInput, nullptr);
+
+	assert(SUCCEEDED(hr));
+
+
+	// キーボードデバイスの作成
+	IDirectInputDevice* keyboard = nullptr;
+
+	hr = directInput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
+
+	assert(SUCCEEDED(hr));
+
+
+	// 入力データ形式のセット
+	hr = keyboard->SetDataFormat(&c_dfDIKeyboard);
+
+	assert(SUCCEEDED(hr));
+
+
+	hr = keyboard->SetCooperativeLevel(hwnd,
+		DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
+
+	assert(SUCCEEDED(hr));
+
+
 
 	// デバイスの作成
 	Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory = nullptr;
 
-	HRESULT hr = CreateDXGIFactory2(0, IID_PPV_ARGS(&dxgiFactory));
+	hr = CreateDXGIFactory2(0, IID_PPV_ARGS(&dxgiFactory));
 
 	assert(SUCCEEDED(hr));
 
@@ -1474,11 +1503,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	IXAudio2MasteringVoice* masterVoice;
 
-	HRESULT result;
+	hr = XAudio2Create(xAudio2.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
 
-	result = XAudio2Create(xAudio2.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
-
-	result = xAudio2->CreateMasteringVoice(&masterVoice);
+	hr = xAudio2->CreateMasteringVoice(&masterVoice);
 
 	SoundData soundData1 = SoundLoadWave("Resources/Alarm01.wav");
 
@@ -1517,6 +1544,13 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			ImGui::NewFrame();
 
 #endif
+
+			// キーボードの状態を更新する
+			keyboard->Acquire();
+
+			// 全キーの入力状態を取得する
+			BYTE key[256] = {};
+			keyboard->GetDeviceState(sizeof(key), key);
 
 
 
