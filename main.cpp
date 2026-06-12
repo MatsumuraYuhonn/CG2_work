@@ -11,9 +11,16 @@
 #include<fstream>
 #include<sstream>
 #include<wrl.h>
+
 #include<xaudio2.h>
 #pragma comment(lib, "xaudio2.lib")
 #include<fstream>
+
+#define DIRECTINPUT_VERSION 0x0800
+#include <dinput.h>
+
+#pragma comment(lib, "dinput8.lib")
+#pragma comment(lib, "dxguid.lib")
 
 
 #include"externals/DirectXTex/DirectXTex.h"
@@ -688,8 +695,6 @@ ModelData LoadobjFile(const std::string& directoryPath, const std::string& filen
 
 SoundData SoundLoadWave(const char* filename) {
 
-	//HRESULT result;
-
 	// ファイルオープン
 	std::ifstream file;
 
@@ -707,7 +712,7 @@ SoundData SoundLoadWave(const char* filename) {
 		assert(false);
 	}
 
-	if (strncmp(riff.chunk.id, "WAVE", 4) != 0) {
+	if (strncmp(riff.type, "WAVE", 4) != 0) {
 		assert(false);
 	}
 
@@ -1469,11 +1474,15 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 		IXAudio2MasteringVoice* masterVoice;
 
-		HRESULT result = XAudio2Create(xAudio2.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
+		HRESULT result;
+
+		result = XAudio2Create(xAudio2.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
 
 		result = xAudio2->CreateMasteringVoice(&masterVoice);
 
 		SoundData soundData1 = SoundLoadWave("Resources/Alarm01.wav");
+
+		SoundPlayWave(xAudio2.Get(), &soundData1);
 
 #ifdef USE_IMGUI
 
@@ -1509,6 +1518,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 #endif
 
+
+
 				// ゲームの処理
 				//transform.rotate.y += 0.03f;
 
@@ -1538,9 +1549,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 				uvTransformMatrix = Multiply(uvTransformMatrix, MakeRotateZMatrix(uvTransformSprite.rotate.z));
 				uvTransformMatrix = Multiply(uvTransformMatrix, MakeTranslateMatrix(uvTransformSprite.translate));
 				materialDataSprite->uvTransform = uvTransformMatrix;
-
-
-				SoundPlayWave(xAudio2.Get(), &soundData1);
 
 
 #ifdef USE_IMGUI
