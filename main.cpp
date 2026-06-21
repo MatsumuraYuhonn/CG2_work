@@ -1,26 +1,23 @@
 #include <Windows.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>
-#include<cassert>
-#include<dxgidebug.h>
-#include<dxcapi.h>
-#include<vector>
+#include <dxgidebug.h>
+#include <dxcapi.h>
+#include <vector>
 #include "Logger.h"
 #include "Window.h"
+#include "Vector.h"
+#include "Transform.h"
 #include "CrashHandler.h"
-#include<fstream>
-#include<sstream>
-#include<wrl.h>
+#include "DebugCamera.h"
+#include <fstream>
+#include <sstream>
+#include <wrl.h>
+#include "DeviceInput.h"
 
 #include<xaudio2.h>
 #pragma comment(lib, "xaudio2.lib")
 #include<fstream>
-
-#define DIRECTINPUT_VERSION 0x0800
-#include <dinput.h>
-
-#pragma comment(lib, "dinput8.lib")
-#pragma comment(lib, "dxguid.lib")
 
 
 #include"externals/DirectXTex/DirectXTex.h"
@@ -41,38 +38,6 @@ struct D3DResourceLeakChecker {
 			debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
 		}
 	}
-};
-
-struct Vector4 {
-	float x;
-	float y;
-	float z;
-	float w;
-};
-
-struct Vector3 {
-	float x;
-	float y;
-	float z;
-};
-
-struct Vector2 {
-	float x;
-	float y;
-};
-
-struct Matrix3x3 {
-	float m[3][3];
-};
-
-struct Matrix4x4 {
-	float m[4][4];
-};
-
-struct Transform {
-	Vector3 scale;
-	Vector3 rotate;
-	Vector3 translate;
 };
 
 struct VertexData {
@@ -138,7 +103,6 @@ public:
 	~ResourceObject() {
 
 
-
 	};
 
 	Microsoft::WRL::ComPtr <ID3D12Resource> Get() { return resource_; }
@@ -148,156 +112,6 @@ private:
 	Microsoft::WRL::ComPtr <ID3D12Resource> resource_;
 
 };
-
-
-Matrix4x4 MakeIdentity4x4() {
-	Matrix4x4 result = {};
-
-	result.m[0][0] = 1.0f;
-	result.m[1][1] = 1.0f;
-	result.m[2][2] = 1.0f;
-	result.m[3][3] = 1.0f;
-
-	return result;
-}
-
-Matrix4x4 MakeScaleMatrix(const Vector3& scale) {
-	Matrix4x4 result = MakeIdentity4x4();
-	result.m[0][0] = scale.x;
-	result.m[1][1] = scale.y;
-	result.m[2][2] = scale.z;
-	return result;
-}
-
-Matrix4x4 MakeRotateZMatrix(float theta) {
-	Matrix4x4 result = MakeIdentity4x4();
-	result.m[0][0] = std::cos(theta);
-	result.m[0][1] = std::sin(theta);
-	result.m[1][0] = -std::sin(theta);
-	result.m[1][1] = std::cos(theta);
-	return result;
-}
-
-Matrix4x4 MakeTranslateMatrix(const Vector3& translate) {
-	Matrix4x4 result = MakeIdentity4x4();
-	result.m[3][0] = translate.x;
-	result.m[3][1] = translate.y;
-	result.m[3][2] = translate.z;
-	result.m[3][3] = 1.0f;
-	return result;
-}
-
-Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rot, const Vector3& translate) {
-	Matrix4x4 result = {};
-
-	// 回転の計算 (ラジアン角)
-	float sinX = std::sin(rot.x);
-	float cosX = std::cos(rot.x);
-	float sinY = std::sin(rot.y);
-	float cosY = std::cos(rot.y);
-	float sinZ = std::sin(rot.z);
-	float cosZ = std::cos(rot.z);
-
-	// X軸 → Y軸 → Z軸の順で回転させた場合のアフィン変換行列
-	// (Scale * Rotate * Translate)
-	result.m[0][0] = scale.x * (cosY * cosZ + sinX * sinY * sinZ);
-	result.m[0][1] = scale.x * (sinX * sinY * cosZ - cosY * sinZ);
-	result.m[0][2] = scale.x * (cosX * sinY);
-	result.m[0][3] = 0.0f;
-
-	result.m[1][0] = scale.y * (cosX * sinZ);
-	result.m[1][1] = scale.y * (cosX * cosZ);
-	result.m[1][2] = scale.y * (-sinX);
-	result.m[1][3] = 0.0f;
-
-	result.m[2][0] = scale.z * (sinX * cosY * sinZ - sinY * cosZ);
-	result.m[2][1] = scale.z * (sinX * cosY * cosZ + sinY * sinZ);
-	result.m[2][2] = scale.z * (cosX * cosY);
-	result.m[2][3] = 0.0f;
-
-	// 平行移動
-	result.m[3][0] = translate.x;
-	result.m[3][1] = translate.y;
-	result.m[3][2] = translate.z;
-	result.m[3][3] = 1.0f;
-
-	return result;
-}
-
-Matrix4x4 Multiply(const Matrix4x4& m1, const Matrix4x4& m2) {
-	Matrix4x4 result = {};
-	for (int i = 0; i < 4; ++i) {
-		for (int j = 0; j < 4; ++j) {
-			result.m[i][j] = m1.m[i][0] * m2.m[0][j] +
-				m1.m[i][1] * m2.m[1][j] +
-				m1.m[i][2] * m2.m[2][j] +
-				m1.m[i][3] * m2.m[3][j];
-		}
-	}
-	return result;
-}
-
-Matrix4x4 MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip, float farClip) {
-	Matrix4x4 result = {};
-
-	float cot = 1.0f / std::tan(fovY / 2.0f);
-
-	result.m[0][0] = cot / aspectRatio;
-	result.m[1][1] = cot;
-	result.m[2][2] = farClip / (farClip - nearClip);
-	result.m[2][3] = 1.0f;
-	result.m[3][2] = -(nearClip * farClip) / (farClip - nearClip);
-	result.m[3][3] = 0.0f;
-
-	return result;
-}
-
-Matrix4x4 Inverse(const Matrix4x4& m) {
-	Matrix4x4 result = {};
-
-	float b00 = m.m[0][0] * m.m[1][1] - m.m[0][1] * m.m[1][0];
-	float b01 = m.m[0][0] * m.m[1][2] - m.m[0][2] * m.m[1][0];
-	float b02 = m.m[0][0] * m.m[1][3] - m.m[0][3] * m.m[1][0];
-	float b03 = m.m[0][1] * m.m[1][2] - m.m[0][2] * m.m[1][1];
-	float b04 = m.m[0][1] * m.m[1][3] - m.m[0][3] * m.m[1][1];
-	float b05 = m.m[0][2] * m.m[1][3] - m.m[0][3] * m.m[1][2];
-	float b06 = m.m[2][0] * m.m[3][1] - m.m[2][1] * m.m[3][0];
-	float b07 = m.m[2][0] * m.m[3][2] - m.m[2][2] * m.m[3][0];
-	float b08 = m.m[2][0] * m.m[3][3] - m.m[2][3] * m.m[3][0];
-	float b09 = m.m[2][1] * m.m[3][2] - m.m[2][2] * m.m[3][1];
-	float b10 = m.m[2][1] * m.m[3][3] - m.m[2][3] * m.m[3][1];
-	float b11 = m.m[2][2] * m.m[3][3] - m.m[2][3] * m.m[3][2];
-
-	float det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
-
-	if (det == 0.0f) {
-		return result;
-	}
-
-	float invDet = 1.0f / det;
-
-	result.m[0][0] = (m.m[1][1] * b11 - m.m[1][2] * b10 + m.m[1][3] * b09) * invDet;
-	result.m[0][1] = (-m.m[0][1] * b11 + m.m[0][2] * b10 - m.m[0][3] * b09) * invDet;
-	result.m[0][2] = (m.m[3][1] * b05 - m.m[3][2] * b04 + m.m[3][3] * b03) * invDet;
-	result.m[0][3] = (-m.m[2][1] * b05 + m.m[2][2] * b04 - m.m[2][3] * b03) * invDet;
-
-	result.m[1][0] = (-m.m[1][0] * b11 + m.m[1][2] * b08 - m.m[1][3] * b07) * invDet;
-	result.m[1][1] = (m.m[0][0] * b11 - m.m[0][2] * b08 + m.m[0][3] * b07) * invDet;
-	result.m[1][2] = (-m.m[3][0] * b05 + m.m[3][2] * b02 - m.m[3][3] * b01) * invDet;
-	result.m[1][3] = (m.m[2][0] * b05 - m.m[2][2] * b02 + m.m[2][3] * b01) * invDet;
-
-	result.m[2][0] = (m.m[1][0] * b10 - m.m[1][1] * b08 + m.m[1][3] * b06) * invDet;
-	result.m[2][1] = (-m.m[0][0] * b10 + m.m[0][1] * b08 - m.m[0][3] * b06) * invDet;
-	result.m[2][2] = (m.m[3][0] * b04 - m.m[3][1] * b02 + m.m[3][3] * b00) * invDet;
-	result.m[2][3] = (-m.m[2][0] * b04 + m.m[2][1] * b02 - m.m[2][3] * b00) * invDet;
-
-	result.m[3][0] = (-m.m[1][0] * b09 + m.m[1][1] * b07 - m.m[1][2] * b06) * invDet;
-	result.m[3][1] = (m.m[0][0] * b09 - m.m[0][1] * b07 + m.m[0][2] * b06) * invDet;
-	result.m[3][2] = (-m.m[3][0] * b03 + m.m[3][1] * b01 - m.m[3][2] * b00) * invDet;
-	result.m[3][3] = (m.m[2][0] * b03 - m.m[2][1] * b01 + m.m[2][2] * b00) * invDet;
-
-	return result;
-}
 
 IDxcBlob* CompileShader(const std::wstring& filePath, const wchar_t* profile, IDxcUtils* dxcUtils,
 	IDxcCompiler3* dxcCompiler, IDxcIncludeHandler* includeHandler) {
@@ -792,8 +606,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	D3DResourceLeakChecker leakCheck;
 
-	HWND hwnd = nullptr;
-
 	HRESULT hrCoInit = CoInitializeEx(0, COINIT_MULTITHREADED);
 	assert(SUCCEEDED(hrCoInit));
 
@@ -807,6 +619,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	hwnd = CreateGameWindow();
 
+	DeviceInputInitialize(GetModuleHandle(nullptr), hwnd);
 
 #ifdef _DEBUG
 
@@ -820,38 +633,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	}
 
 #endif
-
-	// DirectInputの初期化
-	IDirectInput* directInput = nullptr;
-
-	WNDCLASS w{};
-
-	HRESULT hr = DirectInput8Create(w.hInstance, DIRECTINPUT_VERSION, 
-		IID_IDirectInput8, (void**)&directInput, nullptr);
-
-	assert(SUCCEEDED(hr));
-
-
-	// キーボードデバイスの作成
-	IDirectInputDevice* keyboard = nullptr;
-
-	hr = directInput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
-
-	assert(SUCCEEDED(hr));
-
-
-	// 入力データ形式のセット
-	hr = keyboard->SetDataFormat(&c_dfDIKeyboard);
-
-	assert(SUCCEEDED(hr));
-
-
-	hr = keyboard->SetCooperativeLevel(hwnd,
-		DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
-
-	assert(SUCCEEDED(hr));
-
-
 
 	// デバイスの作成
 	Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory = nullptr;
@@ -1358,7 +1139,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	materialData->enabledLighting = 1;
 
-	materialData->uvTransform = MakeIdentity4x4();
+	materialData->uvTransform = MakeIdentityMatrix();
 
 
 	Microsoft::WRL::ComPtr <ID3D12Resource> materialResourceSprite = CreateBufferResource(device, AlignForConstantBuffer(sizeof(Material)));
@@ -1367,7 +1148,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	materialDataSprite->color = { 1.0f, 1.0f, 1.0f, 1.0f };
 	materialDataSprite->enabledLighting = false;
-	materialDataSprite->uvTransform = MakeIdentity4x4();
+	materialDataSprite->uvTransform = MakeIdentityMatrix();
 
 	Microsoft::WRL::ComPtr <ID3D12Resource> directionalLightResource = CreateBufferResource(device, AlignForConstantBuffer(sizeof(DirectionalLight)));
 
@@ -1386,8 +1167,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	wvpResource->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
 
-	wvpData->WVP = MakeIdentity4x4();
-	wvpData->World = MakeIdentity4x4();
+	wvpData->WVP = MakeIdentityMatrix();
+	wvpData->World = MakeIdentityMatrix();
 
 
 	// Sprite用のTransformationMatrix用のリソースを作る。
@@ -1395,7 +1176,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	Matrix4x4* transformationMatrixDataSprite = nullptr;
 	transformationMatrixResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&transformationMatrixDataSprite));
-	*transformationMatrixDataSprite = MakeIdentity4x4();
+	*transformationMatrixDataSprite = MakeIdentityMatrix();
 
 
 	// textureを読んで転送する
@@ -1511,6 +1292,13 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	SoundPlayWave(xAudio2.Get(), &soundData1);
 
+	// デバックカメラ
+	DebugCamera debugCamera;
+	debugCamera.Initialize();
+
+	bool isDebugCameraActive_ = false;
+
+
 #ifdef USE_IMGUI
 
 	IMGUI_CHECKVERSION();
@@ -1537,6 +1325,13 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		}
 		else {
 
+
+			DeviceInputUpdate();
+
+			if (key[DIK_1] && !preKey[DIK_1]) {
+				isDebugCameraActive_ = !isDebugCameraActive_;
+			}
+
 #ifdef USE_IMGUI
 
 			ImGui_ImplDX12_NewFrame();
@@ -1544,15 +1339,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			ImGui::NewFrame();
 
 #endif
-
-			// キーボードの状態を更新する
-			keyboard->Acquire();
-
-			// 全キーの入力状態を取得する
-			BYTE key[256] = {};
-			keyboard->GetDeviceState(sizeof(key), key);
-
-
 
 			// ゲームの処理
 			//transform.rotate.y += 0.03f;
@@ -1562,18 +1348,40 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			Vector3 cameraPos = { 0.0f, 0.0f, -5.0f };
 
 			Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
-			Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
-			Matrix4x4 viewMatrix = Inverse(cameraMatrix);
-			Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
-			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
+			//Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
+			//Matrix4x4 viewMatrix = Inverse(cameraMatrix);
+			//Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
+			//Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
+
+			Matrix4x4 viewProjectionMatrix;
+
+			if (isDebugCameraActive_) {
+				// デバッグカメラ有効時
+				debugCamera.Update(); // 更新処理
+				viewProjectionMatrix = Multiply(debugCamera.GetViewMatrix(), debugCamera.GetProjectionMatrix());
+
+			}
+			else {
+				// 通常カメラ使用時
+				Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
+				Matrix4x4 viewMatrix = Inverse(cameraMatrix);
+				Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
+				viewProjectionMatrix = Multiply(viewMatrix, projectionMatrix);
+			}
+
+			// 3. WVP行列への反映
+			wvpData->WVP = Multiply(worldMatrix, viewProjectionMatrix);
+			wvpData->World = worldMatrix;
+			
+
 
 			//*wvpData = worldViewProjectionMatrix;
-			wvpData->WVP = worldViewProjectionMatrix;
-			wvpData->World = worldMatrix;
+			//wvpData->WVP = worldViewProjectionMatrix;
+			//wvpData->World = worldMatrix;
 
 			// Sprite用のWorldViewProjectionMatrixを作る
 			Matrix4x4 worldMatrixSprite = MakeAffineMatrix(transformSprite.scale, transformSprite.rotate, transformSprite.translate);
-			Matrix4x4 viewMatrixSprite = MakeIdentity4x4();
+			Matrix4x4 viewMatrixSprite = MakeIdentityMatrix();
 			Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(kClientWidth), float(kClientHeight), 0.0f, 100.0f);
 			Matrix4x4 worldViewProjectionMatrixSprite = Multiply(worldMatrixSprite, Multiply(viewMatrixSprite, projectionMatrixSprite));
 			*transformationMatrixDataSprite = worldViewProjectionMatrixSprite;
@@ -1589,8 +1397,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 			ImGui::Begin("Debug Settings");
 
-			ImGui::DragFloat3("Camera Position", &cameraTransform.translate.x, 0.1f);
-			ImGui::DragFloat3("Camera Rotation", &cameraTransform.rotate.x, 0.01f);
+			//ImGui::DragFloat3("Camera Position", &cameraTransform.translate.x, 0.1f);
+			//ImGui::DragFloat3("Camera Rotation", &cameraTransform.rotate.x, 0.01f);
 
 			ImGui::DragFloat3("Sprite Position", &transformSprite.translate.x, 1.0f);
 			ImGui::DragFloat3("Sprite Rotation", &transformSprite.rotate.x, 0.01f);
@@ -1627,6 +1435,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			ImGui::DragFloat3("Model Rotate", &transform.rotate.x, 0.01f);
 			ImGui::DragFloat3("Model Translate", &transform.translate.x, 0.1f);
 
+
+			ImGui::Checkbox("Debug Camera", &isDebugCameraActive_);
 
 			ImGui::End();
 
