@@ -1,30 +1,26 @@
 #include <Windows.h>
-#include <d3d12.h>
-#include <dxgi1_6.h>
 #include <dxgidebug.h>
 #include <dxcapi.h>
 #include <vector>
-#include "Logger.h"
-#include "Window.h"
-#include "Vector.h"
-#include "Transform.h"
-#include "CrashHandler.h"
-#include "DebugCamera.h"
 #include <fstream>
 #include <sstream>
 #include <wrl.h>
-#include "DeviceInput.h"
 
-#include<xaudio2.h>
-#pragma comment(lib, "xaudio2.lib")
-#include<fstream>
+// ファイル分け済み
+#include "Logger.h"
+#include "Window.h"
+#include "Vector.h"
+#include "DeviceInput.h"
+#include "Sound.h"
+#include "Dx12Device.h"
+#include "Transform.h"
+#include "CrashHandler.h"
+#include "DebugCamera.h"
 
 
 #include"externals/DirectXTex/DirectXTex.h"
 #include"externals/DirectXTex/d3dx12.h"
 
-#pragma comment(lib, "d3d12.lib")
-#pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "dxcompiler.lib")
 
@@ -71,27 +67,6 @@ struct  MaterialData {
 struct ModelData {
 	std::vector<VertexData> vertices;
 	MaterialData material;
-};
-
-struct ChunkHeader {
-	char id[4];
-	int32_t size;
-};
-
-struct RiffHeader {
-	ChunkHeader chunk;
-	char type[4];
-};
-
-struct FormatChunk {
-	ChunkHeader chunk;
-	WAVEFORMATEX fmt;
-};
-
-struct SoundData {
-	WAVEFORMATEX wfex;
-	BYTE* pBUffer;
-	unsigned int bufferSize;
 };
 
 class ResourceObject {
@@ -507,101 +482,6 @@ ModelData LoadobjFile(const std::string& directoryPath, const std::string& filen
 	return modelData;
 }
 
-SoundData SoundLoadWave(const char* filename) {
-
-	// ファイルオープン
-	std::ifstream file;
-
-	file.open(filename, std::ios_base::binary);
-
-	assert(file.is_open());
-
-
-	// .wavデータ読み込み
-	RiffHeader riff;
-
-	file.read((char*)&riff, sizeof(riff));
-
-	if (strncmp(riff.chunk.id, "RIFF", 4) != 0) {
-		assert(false);
-	}
-
-	if (strncmp(riff.type, "WAVE", 4) != 0) {
-		assert(false);
-	}
-
-
-	FormatChunk format = {};
-
-	file.read((char*)&format, sizeof(ChunkHeader));
-	if (strncmp(format.chunk.id, "fmt ", 4) != 0) {
-		assert(false);
-	}
-
-	assert(format.chunk.size <= sizeof(format.fmt));
-	file.read((char*)&format.fmt, format.chunk.size);
-
-
-	ChunkHeader data;
-	file.read((char*)&data, sizeof(data));
-
-	if (strncmp(data.id, "JUNK", 4) == 0) {
-
-		file.seekg(data.size, std::ios_base::cur);
-
-		file.read((char*)&data, sizeof(data));
-	}
-
-	if (strncmp(data.id, "data", 4) != 0) {
-		assert(false);
-	}
-
-	char* pBuffer = new char[data.size];
-	file.read(pBuffer, data.size);
-
-
-	file.close();
-
-
-	// 読み込んだ音声データをreturn
-	SoundData soundData = {};
-
-	soundData.wfex = format.fmt;
-	soundData.pBUffer = reinterpret_cast<BYTE*>(pBuffer);
-	soundData.bufferSize = data.size;
-
-	return soundData;
-
-}
-
-void SoundUnload(SoundData* soundData) {
-
-	delete[] soundData->pBUffer;
-
-	soundData->pBUffer = nullptr;
-	soundData->bufferSize = 0;
-	soundData->wfex = {};
-
-}
-
-void SoundPlayWave(IXAudio2* xAudio2, const SoundData* soundData) {
-
-	HRESULT result;
-
-	IXAudio2SourceVoice* pSourceVoice = nullptr;
-	result = xAudio2->CreateSourceVoice(&pSourceVoice, &soundData->wfex);
-	assert(SUCCEEDED(result));
-
-	XAUDIO2_BUFFER buf{};
-	buf.pAudioData = soundData->pBUffer;
-	buf.AudioBytes = soundData->bufferSize;
-	buf.Flags = XAUDIO2_END_OF_STREAM;
-
-	result = pSourceVoice->SubmitSourceBuffer(&buf);
-	result = pSourceVoice->Start();
-
-}
-
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	D3DResourceLeakChecker leakCheck;
@@ -634,66 +514,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 #endif
 
-	// デバイスの作成
-	Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory = nullptr;
 
-	hr = CreateDXGIFactory2(0, IID_PPV_ARGS(&dxgiFactory));
-
-	assert(SUCCEEDED(hr));
-
-	Microsoft::WRL::ComPtr < IDXGIAdapter4> useAdapter = nullptr;
-
-	for (UINT i = 0; dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-		IID_PPV_ARGS(&useAdapter)) != DXGI_ERROR_NOT_FOUND; i++) {
-
-
-		DXGI_ADAPTER_DESC3 adapterDesc{};
-
-		hr = useAdapter->GetDesc3(&adapterDesc);
-
-		assert(SUCCEEDED(hr));
-
-		if (!(adapterDesc.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE)) {
-
-			Log(ConvertString(std::format(L"Use Adapter!{}\n", adapterDesc.Description)));
-
-			break;
-		}
-
-
-		useAdapter = nullptr;
-
-	}
-
-	assert(useAdapter != nullptr);
-
-
-	Microsoft::WRL::ComPtr <ID3D12Device> device = nullptr;
-
-	D3D_FEATURE_LEVEL featureLevels[] = {
-
-		D3D_FEATURE_LEVEL_12_2,  D3D_FEATURE_LEVEL_12_1,  D3D_FEATURE_LEVEL_12_0,
-
-	};
-
-	const char* featureLevelStrings[] = {
-		"12.2", "12.1", "12.0",
-	};
-
-	for (size_t i = 0; i < _countof(featureLevels); ++i) {
-
-		hr = D3D12CreateDevice(useAdapter.Get(), featureLevels[i], IID_PPV_ARGS(&device));
-
-		if (SUCCEEDED(hr)) {
-
-			Log(std::format("Feature Level : {}\n", featureLevelStrings[i]));
-
-			break;
-		}
-	}
-
-	assert(device != nullptr);
-	Log("complete create D3D12Device!!!\n");
 
 
 	const uint32_t descriptorSizeSRV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
