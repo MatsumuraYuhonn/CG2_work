@@ -3,7 +3,7 @@
 #include <sstream>
 #include <cassert>
 
-ModelData LoadObjFile(const std::string& directoryPath, const std::string& filename) {
+ModelData Model::LoadObjFile(const std::string& directoryPath, const std::string& filename) {
 
     ModelData modelData;
     std::vector<Vector4> positions;
@@ -66,13 +66,21 @@ ModelData LoadObjFile(const std::string& directoryPath, const std::string& filen
         else if (identifier == "mtllib") {
             std::string materialFilename;
             s >> materialFilename;
-            modelData.material = LoadMaterialTemplateFile(directoryPath, materialFilename);
+            modelData.material = Model::LoadMaterialTemplateFile(directoryPath, materialFilename);
         }
     }
     return modelData;
 }
 
-MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename) {
+Model::Model()
+{
+}
+
+Model::~Model()
+{
+}
+
+MaterialData Model::LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename) {
     MaterialData materialData;
     std::string line;
     std::ifstream file(directoryPath + "/" + filename);

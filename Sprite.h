@@ -1,11 +1,11 @@
 #pragma once
-#pragma once
 #include <Windows.h>
 #include <d3d12.h>
 #include <wrl.h>
 #include <cstdint>
 #include "Vector.h"
 #include "Transform.h"
+#include "Matrix.h"
 
 struct Material {
     Vector4 color;

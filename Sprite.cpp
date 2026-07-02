@@ -4,9 +4,11 @@
 #include "Matrix.h"
 
 extern Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t sizeInBytes);
+
 extern Matrix4x4 MakeIdentityMatrix();
+
 extern Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate);
-// ...（必要な行列関数のextern宣言、またはヘッダのinclude）
+
 
 void Sprite::Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, uint32_t width, uint32_t height, D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU) {
     width_ = width;
@@ -25,8 +27,28 @@ void Sprite::Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, uint32_t wi
 
     VertexData* vertexData = nullptr;
     vertexResource_->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
-    // main.cppにあった頂点座標の設定をここで行う（width_, height_ を使用して可変にすると便利）
-    vertexData[0].position = { 0.0f, float(height_), 0.0f, 1.0f }; // ...以下略
+
+    // 【修正】4頂点分の座標とUVを正しく設定（2DなのでZ=0, W=1）
+    // 左上
+    vertexData[0].position = { 0.0f, 0.0f, 0.0f, 1.0f };
+    vertexData[0].texcoord = { 0.0f, 0.0f };
+    vertexData[0].normal = { 0.0f, 0.0f, -1.0f };
+
+    // 右上
+    vertexData[1].position = { float(width_), 0.0f, 0.0f, 1.0f };
+    vertexData[1].texcoord = { 1.0f, 0.0f };
+    vertexData[1].normal = { 0.0f, 0.0f, -1.0f };
+
+    // 左下
+    vertexData[2].position = { 0.0f, float(height_), 0.0f, 1.0f };
+    vertexData[2].texcoord = { 0.0f, 1.0f };
+    vertexData[2].normal = { 0.0f, 0.0f, -1.0f };
+
+    // 右下
+    vertexData[3].position = { float(width_), float(height_), 0.0f, 1.0f };
+    vertexData[3].texcoord = { 1.0f, 1.0f };
+    vertexData[3].normal = { 0.0f, 0.0f, -1.0f };
+
     vertexResource_->Unmap(0, nullptr);
 
     // --- インデックスリソースの作成とデータ書き込み ---
@@ -37,31 +59,33 @@ void Sprite::Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, uint32_t wi
 
     uint32_t* indexData = nullptr;
     indexResource_->Map(0, nullptr, reinterpret_cast<void**>(&indexData));
+    // 左上(0), 右上(1), 左下(2), 右下(3) の組み合わせ
     indexData[0] = 0; indexData[1] = 1; indexData[2] = 2;
     indexData[3] = 1; indexData[4] = 3; indexData[5] = 2;
     indexResource_->Unmap(0, nullptr);
 
     // --- 各種定数バッファの作成 ---
     materialResource_ = CreateBufferResource(device, (sizeof(Material) + 255) & ~255);
-    transformationMatrixResource_ = CreateBufferResource(device, (sizeof(Matrix4x4) + 255) & ~255);
+    transformationMatrixResource_ = CreateBufferResource(device, (sizeof(TransformationMatrix) + 255) & ~255); 
+
 }
 
 void Sprite::Update(const Matrix4x4& projectionMatrix) {
-    // 1. マテリアル（色・UV）の更新
+  
     Material* materialData = nullptr;
     materialResource_->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
     materialData->color = color;
     materialData->enabledLighting = false;
-    // uvTransform の計算をして代入
+    materialData->uvTransform = MakeAffineMatrix(uvTransform.scale, uvTransform.rotate, uvTransform.translate); 
     materialResource_->Unmap(0, nullptr);
 
-    // 2. 行列（WVP）の更新
     Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
-    Matrix4x4 wvpMatrix = Multiply(worldMatrix, projectionMatrix); // 2DなのでViewは単位行列でOK
+    Matrix4x4 wvpMatrix = Multiply(worldMatrix, projectionMatrix);
 
-    Matrix4x4* wvpData = nullptr;
+    TransformationMatrix* wvpData = nullptr;
     transformationMatrixResource_->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
-    *wvpData = wvpMatrix;
+    wvpData->WVP = wvpMatrix;
+    wvpData->World = worldMatrix; 
     transformationMatrixResource_->Unmap(0, nullptr);
 }
 
