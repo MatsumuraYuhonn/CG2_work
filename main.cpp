@@ -16,6 +16,8 @@
 #include "Transform.h"
 #include "CrashHandler.h"
 #include "DebugCamera.h"
+#include "Model.h"
+#include "Sprite.h"
 
 
 #include"externals/DirectXTex/DirectXTex.h"
@@ -36,12 +38,6 @@ struct D3DResourceLeakChecker {
 	}
 };
 
-struct VertexData {
-	Vector4 position;
-	Vector2 texcoord;
-	Vector3 normal;
-};
-
 struct TransformationMatrix {
 	Matrix4x4 WVP;
 	Matrix4x4 World;
@@ -53,21 +49,6 @@ struct DirectionalLight {
 	float intensity;
 };
 
-struct Material {
-	Vector4 color;
-	int32_t enabledLighting;
-	float padding[3];
-	Matrix4x4 uvTransform;
-};
-
-struct  MaterialData {
-	std::string textureFilePath;
-};
-
-struct ModelData {
-	std::vector<VertexData> vertices;
-	MaterialData material;
-};
 
 class ResourceObject {
 
@@ -355,133 +336,6 @@ inline size_t AlignForConstantBuffer(size_t size) {
 	return (size + 255) & ~255;
 }
 
-MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename) {
-
-	MaterialData materialData;
-
-	std::string line;
-	std::ifstream file(directoryPath + "/" + filename);
-
-	assert(file.is_open());
-
-
-	while (std::getline(file, line)) {
-
-		std::string identifier;
-		std::istringstream s(line);
-		s >> identifier;
-
-		if (identifier == "map_Kd") {
-
-			std::string textureFilename;
-			s >> textureFilename;
-
-			materialData.textureFilePath = directoryPath + "/" + textureFilename;
-
-		}
-
-	}
-
-	return materialData;
-
-}
-
-ModelData LoadobjFile(const std::string& directoryPath, const std::string& filename) {
-
-	ModelData modelData;
-
-	std::vector<Vector4>positions;
-	std::vector<Vector3>normals;
-	std::vector<Vector2>texcoords;
-	std::string line;
-
-
-	std::ifstream file(directoryPath + "/" + filename);
-	assert(file.is_open());
-
-
-	while (std::getline(file, line)) {
-
-		std::string identifier;
-		std::istringstream s(line);
-		s >> identifier;
-
-
-		if (identifier == "v") {
-
-			Vector4 position;
-			s >> position.x >> position.y >> position.z;
-			position.w = 1.0f;
-			positions.push_back(position);
-
-		}
-		else if (identifier == "vt") {
-
-			Vector2 texcoord;
-			s >> texcoord.x >> texcoord.y;
-			texcoord.y = 1.0f - texcoord.y;
-			texcoords.push_back(texcoord);
-
-		}
-		else if (identifier == "vn") {
-
-			Vector3 normal;
-			s >> normal.x >> normal.y >> normal.z;
-			normals.push_back(normal);
-
-		}
-		else if (identifier == "f") {
-
-			VertexData triangle[3];
-
-			for (int32_t faceVertex = 0; faceVertex < 3; ++faceVertex) {
-
-				std::string vertexDefiniton;
-				s >> vertexDefiniton;
-
-				std::istringstream v(vertexDefiniton);
-				uint32_t elementIndices[3];
-
-				for (int32_t element = 0; element < 3; ++element) {
-
-					std::string index;
-					std::getline(v, index, '/');
-					elementIndices[element] = std::stoi(index);
-
-				}
-
-				Vector4 position = positions[elementIndices[0] - 1];
-				Vector2 texcoord = texcoords[elementIndices[1] - 1];
-				Vector3 normal = normals[elementIndices[2] - 1];
-				//VertexData vertex = { position, texcoord, normal };
-				//modelData.vertices.push_back(vertex);
-
-				position.x *= -1.0f;
-				normal.x *= -1.0f;
-
-				triangle[faceVertex] = { position, texcoord, normal };
-
-			}
-
-			modelData.vertices.push_back(triangle[2]);
-			modelData.vertices.push_back(triangle[1]);
-			modelData.vertices.push_back(triangle[0]);
-
-		}
-		else if (identifier == "mtllib") {
-
-			std::string materialFilename;
-			s >> materialFilename;
-
-			modelData.material = LoadMaterialTemplateFile(directoryPath, materialFilename);
-
-		}
-
-	}
-
-	return modelData;
-}
-
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	D3DResourceLeakChecker leakCheck;
@@ -513,7 +367,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	}
 
 #endif
-
 
 	// DirectX12の初期化
 	Dx12Device dx12Device;
@@ -564,8 +417,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	}
 
 #endif
-
-
 
 	// スワップチェーンの作成
 	Microsoft::WRL::ComPtr < IDXGISwapChain4> swapChain = nullptr;
@@ -855,20 +706,11 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 
 	// モデルを読み込む
-	ModelData modelData = LoadobjFile("Resources", "axis.obj");
+	ModelData modelData = Model::LoadObjFile("Resources", "axis.obj");
+	std::unique_ptr<Model> model = std::make_unique<Model>();
+	model->Initialize(device, modelData);
 
-	Microsoft::WRL::ComPtr <ID3D12Resource> vertexResource = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
-
-
-	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
-
-	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
-	vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * modelData.vertices.size());
-	vertexBufferView.StrideInBytes = sizeof(VertexData);
-
-	VertexData* vertexData = nullptr;
-	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
-	std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData) * modelData.vertices.size());
+	//DirectX::ScratchImage mipImages2 = LoadTexture(model->GetTextureFilePath());
 
 
 	// 球体用のインデックスリソース
@@ -1146,7 +988,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 #endif
 
 			// ゲームの処理
-			//transform.rotate.y += 0.03f;
 
 			Vector3 cameraScale = { 1.0f, 1.0f, 1.0f };
 			Vector3 cameraRot = { 0.0f, 0.0f, 0.0f };
@@ -1279,8 +1120,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 			commandList->SetPipelineState(graphicsPipelineState.Get());
 
-			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
@@ -1291,16 +1130,13 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			commandList->SetDescriptorHeaps(1, descriptorHeaps);
 
 			// --- 球体の描画 ---
-			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-			//commandList->IASetIndexBuffer(&indexBufferViewSphere);
 			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
 			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
 
 			commandList->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
 			commandList->SetGraphicsRootConstantBufferView(3, directionalLightResource->GetGPUVirtualAddress());
-			//commandList->DrawIndexedInstanced(kIndexCountSphere, 1, 0, 0, 0);
 
-			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
+			model->Draw(commandList);
 
 			// --- スプライトの描画 ---
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);
