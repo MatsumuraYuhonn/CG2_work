@@ -515,11 +515,20 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 #endif
 
 
+	// DirectX12の初期化
+	Dx12Device dx12Device;
+	bool isInitialized = dx12Device.Initialize();
+	assert(isInitialized);
 
+	Microsoft::WRL::ComPtr<ID3D12Device> device = dx12Device.GetDevice();
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList = dx12Device.GetCommandList();
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator = dx12Device.GetCommandAllocator();
+	Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue = dx12Device.GetCommandQueue();
+	Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory = dx12Device.GetDxgiFactory();
 
-	const uint32_t descriptorSizeSRV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	const uint32_t descriptorSizeRTV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	const uint32_t descriptorSizeDSV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	const UINT descriptorSizeSRV = dx12Device.GetDescriptorSizeSRV();
+	const UINT descriptorSizeRTV = dx12Device.GetDescriptorSizeRTV();
+	const UINT descriptorSizeDSV = dx12Device.GetDescriptorSizeDSV();
 
 
 #ifdef _DEBUG
@@ -556,31 +565,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 #endif
 
-
-	// CommandQueueの作成
-	Microsoft::WRL::ComPtr <ID3D12CommandQueue> commandQueue = nullptr;
-
-	D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
-
-	hr = device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&commandQueue));
-
-	assert(SUCCEEDED(hr));
-
-
-	// コマンドアロケータの作成
-	Microsoft::WRL::ComPtr <ID3D12CommandAllocator> commandAllocator = nullptr;
-
-	hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
-
-	assert(SUCCEEDED(hr));
-
-
-	// コマンドリストの作成
-	Microsoft::WRL::ComPtr <ID3D12GraphicsCommandList> commandList = nullptr;
-
-	hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList));
-
-	assert(SUCCEEDED(hr));
 
 
 	// スワップチェーンの作成
