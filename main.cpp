@@ -23,6 +23,7 @@
 #include "SwapChain.h"
 #include "DescriptorHeapManager.h"
 #include "TextureManager.h"
+#include "PipelineManager.h"
 
 
 #include"externals/DirectXTex/DirectXTex.h"
@@ -399,6 +400,10 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	assert(pixelShaderBlob != nullptr);
 
 
+	// PipelineManagerの初期化
+	std::unique_ptr<PipelineManager> pipelineManager = std::make_unique<PipelineManager>();
+	pipelineManager->Initialize(device, shaderCompiler.get());
+
 	// PSOを生成する
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
 
@@ -709,9 +714,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 			commandList->RSSetScissorRects(1, &scissorRect);
 
-			commandList->SetGraphicsRootSignature(rootSignature.Get());
-
-			commandList->SetPipelineState(graphicsPipelineState.Get());
+			pipelineManager->Bind(commandList);
 
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
