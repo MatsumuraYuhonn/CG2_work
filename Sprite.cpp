@@ -95,8 +95,15 @@ void Sprite::Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList,
 
     commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource_->GetGPUVirtualAddress());
-    commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU_);
-    commandList->SetGraphicsRootConstantBufferView(3, directionalLightResource->GetGPUVirtualAddress());
+  
+    if (directionalLightResource) {
+        commandList->SetGraphicsRootConstantBufferView(2, directionalLightResource->GetGPUVirtualAddress());
+    }
+    else {
+      
+    }
+
+    commandList->SetGraphicsRootDescriptorTable(3, textureSrvHandleGPU_);
 
     commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 }

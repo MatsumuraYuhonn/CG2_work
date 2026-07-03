@@ -19,6 +19,7 @@
 #include "Model.h"
 #include "Sprite.h"
 #include "ShaderCompiler.h"
+#include "ConstantBuffer.h"
 
 
 #include"externals/DirectXTex/DirectXTex.h"
@@ -38,14 +39,6 @@ struct D3DResourceLeakChecker {
 		}
 	}
 };
-
-
-struct DirectionalLight {
-	Vector4 color;
-	Vector3 direction;
-	float intensity;
-};
-
 
 class ResourceObject {
 
@@ -414,17 +407,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 
 	D3D12_ROOT_PARAMETER rootParameters[4] = {};
-
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-
 	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
 	rootParameters[0].Descriptor.ShaderRegister = 0;
 
 	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-
 	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
 	rootParameters[1].Descriptor.ShaderRegister = 1;
 
 
@@ -435,15 +423,16 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 	descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-	rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;
-	rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
 
+	rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	rootParameters[2].Descriptor.ShaderRegister = 2;
 
-	rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	rootParameters[3].Descriptor.ShaderRegister = 2;
+	rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	rootParameters[3].DescriptorTable.pDescriptorRanges = descriptorRange;
+	rootParameters[3].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange); // t0
+
 
 	descriptionRootSignature.pParameters = rootParameters;
 
@@ -614,33 +603,16 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 
 	// マテリアル用のリソースを作る
-	Microsoft::WRL::ComPtr <ID3D12Resource> materialResourceSprite = CreateBufferResource(device, AlignForConstantBuffer(sizeof(Material)));
-	Material* materialDataSprite = nullptr;
-	materialResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&materialDataSprite));
+	MaterialConstantBuffer materialResourceSprite;
+	materialResourceSprite.Initialize(device);
 
-	materialDataSprite->color = { 1.0f, 1.0f, 1.0f, 1.0f };
-	materialDataSprite->enabledLighting = false;
-	materialDataSprite->uvTransform = MakeIdentityMatrix();
+	// ライト
+	DirectionalLightConstantBuffer directionalLightResource;
+	directionalLightResource.Initialize(device);
 
-	Microsoft::WRL::ComPtr <ID3D12Resource> directionalLightResource = CreateBufferResource(device, AlignForConstantBuffer(sizeof(DirectionalLight)));
-
-	DirectionalLight* directionalLightData = nullptr;
-	directionalLightResource->Map(0, nullptr, reinterpret_cast<void**>(&directionalLightData));
-
-	directionalLightData->color = { 1.0f, 1.0f, 1.0f, 1.0f };
-	directionalLightData->direction = { -1.0f, 0.0f, 0.0f };
-	directionalLightData->intensity = 1.0f;
-
-
-	// トランスフォーメーションマトリックス用のリソースを作る
-	Microsoft::WRL::ComPtr <ID3D12Resource> wvpResource = CreateBufferResource(device, AlignForConstantBuffer(sizeof(TransformationMatrix)));
-
-	TransformationMatrix* wvpData = nullptr;
-
-	wvpResource->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
-
-	wvpData->WVP = MakeIdentityMatrix();
-	wvpData->World = MakeIdentityMatrix();
+	// WVP
+	TransformationMatrixConstantBuffer wvpResource; 
+	wvpResource.Initialize(device);
 
 
 	// textureを読んで転送する
@@ -752,6 +724,15 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	bool isDebugCameraActive_ = false;
 
 
+	materialResourceSprite->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	materialResourceSprite->enabledLighting = 1; 
+	materialResourceSprite->uvTransform = MakeIdentityMatrix();
+
+	directionalLightResource->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	directionalLightResource->direction = Vector3(0.0f, -1.0f, 1.0f);
+	directionalLightResource->intensity = 1.0f;
+
+
 #ifdef USE_IMGUI
 
 	IMGUI_CHECKVERSION();
@@ -820,8 +801,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			}
 
 			// 3. WVP行列への反映
-			wvpData->WVP = Multiply(worldMatrix, viewProjectionMatrix);
-			wvpData->World = worldMatrix;
+			wvpResource->WVP = Multiply(worldMatrix, viewProjectionMatrix);
+			wvpResource->World = worldMatrix;
 			
 			// Sprite用のWorldViewProjectionMatrixを作る
 			Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(kClientWidth), float(kClientHeight), 0.0f, 100.0f);
@@ -839,22 +820,22 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			ImGui::Checkbox("useMonsterBall", &useMonsterBall);
 
 
-			ImGui::ColorEdit4("Light Color", &directionalLightData->color.x);
+			ImGui::ColorEdit4("Light Color", &directionalLightResource->color.x);
 
-			if (ImGui::DragFloat3("Light Direction", &directionalLightData->direction.x, 0.01f, -1.0f, 1.0f)) {
+			if (ImGui::DragFloat3("Light Direction", &directionalLightResource->direction.x, 0.01f, -1.0f, 1.0f)) {
 
-				float length = std::sqrt(directionalLightData->direction.x * directionalLightData->direction.x +
-					directionalLightData->direction.y * directionalLightData->direction.y +
-					directionalLightData->direction.z * directionalLightData->direction.z);
+				float length = std::sqrt(directionalLightResource->direction.x * directionalLightResource->direction.x +
+					directionalLightResource->direction.y * directionalLightResource->direction.y +
+					directionalLightResource->direction.z * directionalLightResource->direction.z);
 
 				if (length != 0) {
-					directionalLightData->direction.x /= length;
-					directionalLightData->direction.y /= length;
-					directionalLightData->direction.z /= length;
+					directionalLightResource->direction.x /= length;
+					directionalLightResource->direction.y /= length;
+					directionalLightResource->direction.z /= length;
 				}
 			}
 
-			ImGui::DragFloat("Intensity", &directionalLightData->intensity, 0.01f, 0.0f, 10.0f);
+			ImGui::DragFloat("Intensity", &directionalLightResource->intensity, 0.01f, 0.0f, 10.0f);
 
 
 			ImGui::DragFloat3("UVTranslate", &sprite->uvTransform.translate.x, 0.01f, -10.0f, 10.0f);
@@ -907,24 +888,24 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-			commandList->SetGraphicsRootConstantBufferView(0, materialResourceSprite->GetGPUVirtualAddress());
-
-			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
+			commandList->SetGraphicsRootConstantBufferView(0, materialResourceSprite.GetGPUVirtualAddress());
+			commandList->SetGraphicsRootConstantBufferView(1, wvpResource.GetGPUVirtualAddress());
+			
 
 			ID3D12DescriptorHeap* descriptorHeaps[] = { srvDescriptorHeap.Get() };
 			commandList->SetDescriptorHeaps(1, descriptorHeaps);
 
 			// --- 球体の描画 ---
-			commandList->SetGraphicsRootConstantBufferView(0, materialResourceSprite->GetGPUVirtualAddress());
-			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
+			commandList->SetGraphicsRootConstantBufferView(0, materialResourceSprite.GetGPUVirtualAddress());
+			commandList->SetGraphicsRootConstantBufferView(1, wvpResource.GetGPUVirtualAddress());
 
-			commandList->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
-			commandList->SetGraphicsRootConstantBufferView(3, directionalLightResource->GetGPUVirtualAddress());
+			commandList->SetGraphicsRootConstantBufferView(2, directionalLightResource.GetGPUVirtualAddress());
+			commandList->SetGraphicsRootDescriptorTable(3, textureSrvHandleGPU);
 
 			model->Draw(commandList);
 
 			// --- スプライトの描画 ---
-			sprite->Draw(commandList, directionalLightResource.Get());
+			sprite->Draw(commandList, directionalLightResource.GetResource());
 
 
 #ifdef USE_IMGUI
