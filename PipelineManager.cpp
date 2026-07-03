@@ -5,19 +5,50 @@
 void PipelineManager::Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, ShaderCompiler* shaderCompiler) {
     HRESULT hr = S_OK;
 
-    // 1. ルートシグネチャの作成 (main.cpp から移植)
+    // 1. ルートシグネチャの作成 (main.cpp から完全移植)
     D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
     descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
+    // DescriptorRange の設定 (rootParameters[3] で使用)
+    D3D12_DESCRIPTOR_RANGE descriptorRange[1] = {};
+    descriptorRange[0].BaseShaderRegister = 0;
+    descriptorRange[0].NumDescriptors = 1;
+    descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    // ルートパラメータの設定
     D3D12_ROOT_PARAMETER rootParameters[4] = {};
-    // (中略: main.cpp の rootParameters の設定をそのまま記述)
-    // ...
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[0].Descriptor.ShaderRegister = 0;
+
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[1].Descriptor.ShaderRegister = 1;
+
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[2].Descriptor.ShaderRegister = 2;
+
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[3].DescriptorTable.pDescriptorRanges = descriptorRange;
+    rootParameters[3].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange); // t0
+
     descriptionRootSignature.pParameters = rootParameters;
     descriptionRootSignature.NumParameters = _countof(rootParameters);
 
+    // スタティックサンプラーの設定
     D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
-    // (中略: main.cpp の staticSamplers の設定をそのまま記述)
-    // ...
+    staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+    staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+    staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
+    staticSamplers[0].ShaderRegister = 0;
+    staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
     descriptionRootSignature.pStaticSamplers = staticSamplers;
     descriptionRootSignature.NumStaticSamplers = _countof(staticSamplers);
 
@@ -36,10 +67,23 @@ void PipelineManager::Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, Sh
     assert(SUCCEEDED(hr));
 
 
-    // 2. インプットレイアウトや各ステートの設定 (main.cpp から移植)
+    // 2. インプットレイアウトの設定 (main.cpp から完全移植)
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
-    // (中略: main.cpp の インプットレイアウト設定)
-    // ...
+    inputElementDescs[0].SemanticName = "POSITION";
+    inputElementDescs[0].SemanticIndex = 0;
+    inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    inputElementDescs[0].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+
+    inputElementDescs[1].SemanticName = "TEXCOORD";
+    inputElementDescs[1].SemanticIndex = 0;
+    inputElementDescs[1].Format = DXGI_FORMAT_R32G32_FLOAT;
+    inputElementDescs[1].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+
+    inputElementDescs[2].SemanticName = "NORMAL";
+    inputElementDescs[2].SemanticIndex = 0;
+    inputElementDescs[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+    inputElementDescs[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+
     D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
     inputLayoutDesc.pInputElementDescs = inputElementDescs;
     inputLayoutDesc.NumElements = _countof(inputElementDescs);

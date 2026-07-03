@@ -24,7 +24,6 @@
 #include "DescriptorHeapManager.h"
 #include "TextureManager.h"
 #include "PipelineManager.h"
-#include "DirectionalLight.h"
 
 
 #include"externals/DirectXTex/DirectXTex.h"
@@ -255,7 +254,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 
 	ResourceObject depthStencilResource = CreateDepthStencilTextureResource(device, kClientWidth, kClientHeight);
-	
+
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
 	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
@@ -476,11 +475,11 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	materialResourceSprite.Initialize(device);
 
 	// ライト
-	std::unique_ptr<DirectionalLight> directionalLight = std::make_unique<DirectionalLight>();
-	directionalLight->Initialize(device);
+	DirectionalLightConstantBuffer directionalLightResource;
+	directionalLightResource.Initialize(device);
 
 	// WVP
-	TransformationMatrixConstantBuffer wvpResource; 
+	TransformationMatrixConstantBuffer wvpResource;
 	wvpResource.Initialize(device);
 
 
@@ -558,9 +557,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	// マテリアルの初期化
 	materialResourceSprite->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-	materialResourceSprite->enabledLighting = 1; 
+	materialResourceSprite->enabledLighting = 1;
 	materialResourceSprite->uvTransform = MakeIdentityMatrix();
 
+	directionalLightResource->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	directionalLightResource->direction = Vector3(0.0f, -1.0f, 1.0f);
+	directionalLightResource->intensity = 1.0f;
 
 
 #ifdef USE_IMGUI
@@ -633,7 +635,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			// 3. WVP行列への反映
 			wvpResource->WVP = Multiply(worldMatrix, viewProjectionMatrix);
 			wvpResource->World = worldMatrix;
-			
+
 			// Sprite用のWorldViewProjectionMatrixを作る
 			Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(kClientWidth), float(kClientHeight), 0.0f, 100.0f);
 			sprite->Update(projectionMatrixSprite);
@@ -650,20 +652,22 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			ImGui::Checkbox("useMonsterBall", &useMonsterBall);
 
 
-			ImGui::ColorEdit4("Light Color", &directionalLight->data.color.x);
+			ImGui::ColorEdit4("Light Color", &directionalLightResource->color.x);
 
-			if (ImGui::DragFloat3("Light Direction", &directionalLight->data.direction.x, 0.01f, -1.0f, 1.0f)) {
-				float length = std::sqrt(directionalLight->data.direction.x * directionalLight->data.direction.x +
-					directionalLight->data.direction.y * directionalLight->data.direction.y +
-					directionalLight->data.direction.z * directionalLight->data.direction.z);
+			if (ImGui::DragFloat3("Light Direction", &directionalLightResource->direction.x, 0.01f, -1.0f, 1.0f)) {
+
+				float length = std::sqrt(directionalLightResource->direction.x * directionalLightResource->direction.x +
+					directionalLightResource->direction.y * directionalLightResource->direction.y +
+					directionalLightResource->direction.z * directionalLightResource->direction.z);
 
 				if (length != 0) {
-					directionalLight->data.direction.x /= length;
-					directionalLight->data.direction.y /= length;
-					directionalLight->data.direction.z /= length;
+					directionalLightResource->direction.x /= length;
+					directionalLightResource->direction.y /= length;
+					directionalLightResource->direction.z /= length;
 				}
 			}
-			ImGui::DragFloat("Intensity", &directionalLight->data.intensity, 0.01f, 0.0f, 10.0f);
+
+			ImGui::DragFloat("Intensity", &directionalLightResource->intensity, 0.01f, 0.0f, 10.0f);
 
 
 			ImGui::DragFloat3("UVTranslate", &sprite->uvTransform.translate.x, 0.01f, -10.0f, 10.0f);
@@ -716,7 +720,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 			commandList->SetGraphicsRootConstantBufferView(0, materialResourceSprite.GetGPUVirtualAddress());
 			commandList->SetGraphicsRootConstantBufferView(1, wvpResource.GetGPUVirtualAddress());
-			
+
 
 			ID3D12DescriptorHeap* descriptorHeaps[] = { srvHeapManager.GetHeap() };
 			commandList->SetDescriptorHeaps(1, descriptorHeaps);
