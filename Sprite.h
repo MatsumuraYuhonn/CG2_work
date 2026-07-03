@@ -26,6 +26,8 @@ public:
     Transform uvTransform;
     Vector4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
+
+
 private:
     Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_;
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView_{};

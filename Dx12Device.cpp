@@ -3,15 +3,21 @@
 #include <cassert>
 #include <format>
 
+Dx12Device::~Dx12Device() {
+    if (fenceEvent_) {
+        CloseHandle(fenceEvent_);
+    }
+}
+
 bool Dx12Device::Initialize() {
 
     HRESULT hr = S_OK;
 
-    // --- 1. DXGIファクトリの生成 ---
+    // --- DXGIファクトリの生成 ---
     hr = CreateDXGIFactory2(0, IID_PPV_ARGS(&dxgiFactory_));
     assert(SUCCEEDED(hr));
 
-    // --- 2. アダプターの選定 ---
+    // --- アダプターの選定 ---
     for (UINT i = 0; dxgiFactory_->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&useAdapter_)) != DXGI_ERROR_NOT_FOUND; i++) {
         DXGI_ADAPTER_DESC3 adapterDesc{};
         hr = useAdapter_->GetDesc3(&adapterDesc);
@@ -25,7 +31,7 @@ bool Dx12Device::Initialize() {
     }
     assert(useAdapter_ != nullptr);
 
-    // --- 3. デバイスの生成 ---
+    // --- デバイスの生成 ---
     D3D_FEATURE_LEVEL featureLevels[] = {
         D3D_FEATURE_LEVEL_12_2,
         D3D_FEATURE_LEVEL_12_1,
@@ -44,12 +50,12 @@ bool Dx12Device::Initialize() {
     }
     assert(deviceCreated);
 
-    // --- 4. 記述子サイズの取得と保持 ---
+    // --- 記述子サイズの取得と保持 ---
     descriptorSizeSRV_ = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     descriptorSizeRTV_ = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     descriptorSizeDSV_ = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
-    // --- 5. コマンド周りの生成 ---
+    // --- コマンド周りの生成 ---
     D3D12_COMMAND_QUEUE_DESC queueDesc{};
     hr = device_->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&commandQueue_));
     assert(SUCCEEDED(hr));
@@ -60,11 +66,30 @@ bool Dx12Device::Initialize() {
     hr = device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator_.Get(), nullptr, IID_PPV_ARGS(&commandList_));
     assert(SUCCEEDED(hr));
 
-    Log("complete create D3D12Device and Commands!!!\n");
+   
+    hr = device_->CreateFence(fenceValue_, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_));
+    assert(SUCCEEDED(hr));
+
+    fenceEvent_ = CreateEvent(NULL, FALSE, FALSE, NULL);
+    assert(fenceEvent_ != nullptr);
+
+    Log("complete create D3D12Device, Commands and Fence!!!\n");
     return true;
 }
 
-// ヘルパー関数の実装例
+void Dx12Device::WaitForGPU() {
+    fenceValue_++;
+
+    commandQueue_->Signal(fence_.Get(), fenceValue_);
+
+    if (fence_->GetCompletedValue() < fenceValue_) {
+     
+        fence_->SetEventOnCompletion(fenceValue_, fenceEvent_);
+        WaitForSingleObject(fenceEvent_, INFINITE);
+    }
+}
+
+
 Microsoft::WRL::ComPtr<ID3D12Resource> Dx12Device::CreateBufferResource(size_t sizeInBytes) {
 
     D3D12_HEAP_PROPERTIES uploadHeapProperties{};
