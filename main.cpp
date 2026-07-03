@@ -24,6 +24,7 @@
 #include "DescriptorHeapManager.h"
 #include "TextureManager.h"
 #include "PipelineManager.h"
+#include "DirectionalLight.h"
 
 
 #include"externals/DirectXTex/DirectXTex.h"
@@ -475,8 +476,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	materialResourceSprite.Initialize(device);
 
 	// ライト
-	DirectionalLightConstantBuffer directionalLightResource;
-	directionalLightResource.Initialize(device);
+	std::unique_ptr<DirectionalLight> directionalLight = std::make_unique<DirectionalLight>();
+	directionalLight->Initialize(device);
 
 	// WVP
 	TransformationMatrixConstantBuffer wvpResource; 
@@ -560,9 +561,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	materialResourceSprite->enabledLighting = 1; 
 	materialResourceSprite->uvTransform = MakeIdentityMatrix();
 
-	directionalLightResource->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-	directionalLightResource->direction = Vector3(0.0f, -1.0f, 1.0f);
-	directionalLightResource->intensity = 1.0f;
 
 
 #ifdef USE_IMGUI
@@ -652,22 +650,20 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			ImGui::Checkbox("useMonsterBall", &useMonsterBall);
 
 
-			ImGui::ColorEdit4("Light Color", &directionalLightResource->color.x);
+			ImGui::ColorEdit4("Light Color", &directionalLight->data.color.x);
 
-			if (ImGui::DragFloat3("Light Direction", &directionalLightResource->direction.x, 0.01f, -1.0f, 1.0f)) {
-
-				float length = std::sqrt(directionalLightResource->direction.x * directionalLightResource->direction.x +
-					directionalLightResource->direction.y * directionalLightResource->direction.y +
-					directionalLightResource->direction.z * directionalLightResource->direction.z);
+			if (ImGui::DragFloat3("Light Direction", &directionalLight->data.direction.x, 0.01f, -1.0f, 1.0f)) {
+				float length = std::sqrt(directionalLight->data.direction.x * directionalLight->data.direction.x +
+					directionalLight->data.direction.y * directionalLight->data.direction.y +
+					directionalLight->data.direction.z * directionalLight->data.direction.z);
 
 				if (length != 0) {
-					directionalLightResource->direction.x /= length;
-					directionalLightResource->direction.y /= length;
-					directionalLightResource->direction.z /= length;
+					directionalLight->data.direction.x /= length;
+					directionalLight->data.direction.y /= length;
+					directionalLight->data.direction.z /= length;
 				}
 			}
-
-			ImGui::DragFloat("Intensity", &directionalLightResource->intensity, 0.01f, 0.0f, 10.0f);
+			ImGui::DragFloat("Intensity", &directionalLight->data.intensity, 0.01f, 0.0f, 10.0f);
 
 
 			ImGui::DragFloat3("UVTranslate", &sprite->uvTransform.translate.x, 0.01f, -10.0f, 10.0f);
