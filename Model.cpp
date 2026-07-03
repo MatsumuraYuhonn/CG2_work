@@ -115,7 +115,7 @@ bool Model::Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, const ModelD
     // データの転送（Map）
     VertexData* vertexData = nullptr;
     HRESULT hr = vertexResource_->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
-    if (FAILED(hr)) return false;
+    assert(SUCCEEDED(hr));
 
     std::memcpy(vertexData, modelData_.vertices.data(), sizeof(VertexData) * modelData_.vertices.size());
     vertexResource_->Unmap(0, nullptr);

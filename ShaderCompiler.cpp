@@ -13,13 +13,13 @@ ShaderCompiler::~ShaderCompiler() {
 
 bool ShaderCompiler::Initialize() {
     HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils_));
-    if (FAILED(hr)) return false;
+    assert(SUCCEEDED(hr));
 
     hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler_));
-    if (FAILED(hr)) return false;
+    assert(SUCCEEDED(hr));
 
     hr = dxcUtils_->CreateDefaultIncludeHandler(&includeHandler_);
-    if (FAILED(hr)) return false;
+    assert(SUCCEEDED(hr));
 
     return true;
 }

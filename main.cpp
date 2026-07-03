@@ -20,6 +20,7 @@
 #include "Sprite.h"
 #include "ShaderCompiler.h"
 #include "ConstantBuffer.h"
+#include "SwapChain.h"
 
 
 #include"externals/DirectXTex/DirectXTex.h"
@@ -284,6 +285,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	bool isInitialized = dx12Device.Initialize();
 	assert(isInitialized);
 
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvDescriptorHeap =
+		dx12Device.CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
+
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvDescriptorHeap =
+		dx12Device.CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128, true);
+
 	Microsoft::WRL::ComPtr<ID3D12Device> device = dx12Device.GetDevice();
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList = dx12Device.GetCommandList();
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator = dx12Device.GetCommandAllocator();
@@ -329,54 +336,23 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 #endif
 
 	// スワップチェーンの作成
-	Microsoft::WRL::ComPtr < IDXGISwapChain4> swapChain = nullptr;
-
-	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
-	swapChainDesc.Width = kClientWidth;
-	swapChainDesc.Height = kClientHeight;
-	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swapChainDesc.SampleDesc.Count = 1;
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.BufferCount = 2;
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-
-	hr = dxgiFactory->CreateSwapChainForHwnd(commandQueue.Get(), hwnd, &swapChainDesc,
-		nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(swapChain.GetAddressOf()));
-
-	assert(SUCCEEDED(hr));
-
-
-	// DescriptorHeapの作成
-	Microsoft::WRL::ComPtr <ID3D12DescriptorHeap> rtvDescriptorHeap = CreateDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
-
-	Microsoft::WRL::ComPtr <ID3D12DescriptorHeap> srvDescriptorHeap = CreateDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128, true);
-
-	// スワップチェーンからリソースを引っ張ってくる
-	Microsoft::WRL::ComPtr <ID3D12Resource> swapChainResources[2] = { nullptr };
-
-	hr = swapChain->GetBuffer(0, IID_PPV_ARGS(&swapChainResources[0]));
-
-	assert(SUCCEEDED(hr));
-
-	hr = swapChain->GetBuffer(1, IID_PPV_ARGS(&swapChainResources[1]));
-
-	assert(SUCCEEDED(hr));
+	SwapChain swapChain;
+	bool isSwapChainInit = swapChain.Initialize(dxgiFactory, commandQueue, hwnd, kClientWidth, kClientHeight);
+	assert(isSwapChainInit);
 
 
 	// RTVの作成
 	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
-
 	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-
 	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[2] = {};
 
 	rtvHandles[0] = getCPUDescriptorHandle(rtvDescriptorHeap, descriptorSizeRTV, 0);
-	device->CreateRenderTargetView(swapChainResources[0].Get(), &rtvDesc, rtvHandles[0]);
+	device->CreateRenderTargetView(swapChain.GetBuffer(0).Get(), &rtvDesc, rtvHandles[0]); // 変更
 
 	rtvHandles[1] = getCPUDescriptorHandle(rtvDescriptorHeap, descriptorSizeRTV, 1);
-	device->CreateRenderTargetView(swapChainResources[1].Get(), &rtvDesc, rtvHandles[1]);
+	device->CreateRenderTargetView(swapChain.GetBuffer(1).Get(), &rtvDesc, rtvHandles[1]); // 変更
 
 
 	ResourceObject depthStencilResource = CreateDepthStencilTextureResource(device, kClientWidth, kClientHeight);
@@ -739,7 +715,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 	ImGui_ImplWin32_Init(hwnd);
-	ImGui_ImplDX12_Init(device.Get(), swapChainDesc.BufferCount, rtvDesc.Format, srvDescriptorHeap.Get(),
+	ImGui_ImplDX12_Init(device.Get(), swapChain.GetBufferCount(), rtvDesc.Format, srvDescriptorHeap.Get(),
 		getCPUDescriptorHandle(srvDescriptorHeap, descriptorSizeSRV, 0), getGPUDescriptorHandle(srvDescriptorHeap, descriptorSizeSRV, 0));
 	ImGuiIO& io = ImGui::GetIO();
 	io.Fonts->Build();
@@ -857,13 +833,13 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 #endif
 
 			// コマンドを積み込んで確定させる
-			UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+			UINT backBufferIndex = swapChain.GetCurrentBackBufferIndex();
 
 			// バリアの設定
 			D3D12_RESOURCE_BARRIER barrier{};
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			barrier.Transition.pResource = swapChainResources[backBufferIndex].Get();
+			barrier.Transition.pResource = swapChain.GetBuffer(backBufferIndex).Get();
 			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
 			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
@@ -928,7 +904,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 			commandQueue->ExecuteCommandLists(1, commandLists);
 
-			swapChain->Present(1, 0);
+			swapChain.Present(1, 0);
 
 
 			fenceValue++;

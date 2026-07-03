@@ -32,7 +32,7 @@ bool ConstantBuffer::InitializeInternal(Microsoft::WRL::ComPtr<ID3D12Device> dev
         nullptr,
         IID_PPV_ARGS(&resource_)
     );
-    if (FAILED(hr)) return false;
+    assert(SUCCEEDED(hr));
 
     hr = resource_->Map(0, nullptr, &mappedData_);
     return SUCCEEDED(hr);
