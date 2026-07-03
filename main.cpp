@@ -22,6 +22,7 @@
 #include "ConstantBuffer.h"
 #include "SwapChain.h"
 #include "DescriptorHeapManager.h"
+#include "TextureManager.h"
 
 
 #include"externals/DirectXTex/DirectXTex.h"
@@ -87,83 +88,6 @@ Microsoft::WRL::ComPtr <ID3D12Resource> CreateBufferResource(Microsoft::WRL::Com
 	assert(SUCCEEDED(hr));
 
 	return bufferResource;
-}
-
-// Textureデータを読む
-DirectX::ScratchImage LoadTexture(const std::string& filePath) {
-
-	DirectX::ScratchImage image{};
-
-	std::wstring filePathw = ConvertString(filePath);
-
-	HRESULT hr = DirectX::LoadFromWICFile(filePathw.c_str(), DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
-
-	assert(SUCCEEDED(hr));
-
-
-	DirectX::ScratchImage mipImage{};
-
-	hr = DirectX::GenerateMipMaps(image.GetImages(), image.GetImageCount(), image.GetMetadata(), DirectX::TEX_FILTER_SRGB, 0, mipImage);
-
-	assert(SUCCEEDED(hr));
-
-	return mipImage;
-}
-
-// TextureResourceを作る
-Microsoft::WRL::ComPtr <ID3D12Resource> CreateTextureResource(Microsoft::WRL::ComPtr <ID3D12Device> device, const DirectX::TexMetadata& metadata) {
-
-	// metadataをもとにresourceの設定
-	D3D12_RESOURCE_DESC resourceDesc{};
-
-	resourceDesc.Width = UINT(metadata.width);
-	resourceDesc.Height = UINT(metadata.height);
-	resourceDesc.MipLevels = UINT16(metadata.mipLevels);
-	resourceDesc.DepthOrArraySize = UINT16(metadata.arraySize);
-	resourceDesc.Format = metadata.format;
-	resourceDesc.SampleDesc.Count = 1;
-	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION(metadata.dimension);
-
-	// 利用するHeapの設定
-	D3D12_HEAP_PROPERTIES heapProperties{};
-	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-
-	// Resourceの生成
-	Microsoft::WRL::ComPtr <ID3D12Resource> resource = nullptr;
-	HRESULT hr = device->CreateCommittedResource(
-		&heapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&resourceDesc,
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		nullptr,
-		IID_PPV_ARGS(&resource)
-	);
-
-	assert(SUCCEEDED(hr));
-
-	return resource;
-
-}
-
-// TextureResourceにデータを転送する
-[[nodiscard]]
-Microsoft::WRL::ComPtr <ID3D12Resource> UploadTextureData(Microsoft::WRL::ComPtr <ID3D12Resource> texture, const DirectX::ScratchImage& mipImages,
-	Microsoft::WRL::ComPtr <ID3D12Device> device, Microsoft::WRL::ComPtr <ID3D12GraphicsCommandList> commandList)
-{
-	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
-	DirectX::PrepareUpload(device.Get(), mipImages.GetImages(), mipImages.GetImageCount(), mipImages.GetMetadata(), subresources);
-	uint64_t intermediateSize = GetRequiredIntermediateSize(texture.Get(), 0, UINT(subresources.size()));
-	Microsoft::WRL::ComPtr <ID3D12Resource> intermediateResource = CreateBufferResource(device.Get(), intermediateSize);
-	UpdateSubresources(commandList.Get(), texture.Get(), intermediateResource.Get(), 0, 0, UINT(subresources.size()), subresources.data());
-	D3D12_RESOURCE_BARRIER barrier{};
-	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	barrier.Transition.pResource = texture.Get();
-	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
-	commandList->ResourceBarrier(1, &barrier);
-	return intermediateResource;
 }
 
 Microsoft::WRL::ComPtr <ID3D12Resource> CreateDepthStencilTextureResource(Microsoft::WRL::ComPtr <ID3D12Device> device, int32_t width, int32_t height) {
@@ -554,54 +478,17 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	wvpResource.Initialize(device);
 
 
-	// textureを読んで転送する
-	DirectX::ScratchImage mipImages = LoadTexture("resources/uvChecker.png");
+	// TextureManagerの初期化
+	TextureManager textureManager;
+	textureManager.Initialize(device, &srvHeapManager);
 
-	const DirectX::TexMetadata& metadata = mipImages.GetMetadata();
+	// TextureManager を使ってテクスチャを読み込む
+	textureManager.Load("resources/uvChecker.png", commandList);
+	textureManager.Load(modelData.material.textureFilePath, commandList);
 
-	Microsoft::WRL::ComPtr <ID3D12Resource> textureResource = CreateTextureResource(device, metadata);
-
-	Microsoft::WRL::ComPtr <ID3D12Resource> intermediateResource = UploadTextureData(textureResource, mipImages, device, commandList);
-
-
-	// 2枚目のtextureを読む
-	DirectX::ScratchImage mipImages2 = LoadTexture(modelData.material.textureFilePath);
-
-	const DirectX::TexMetadata& metadata2 = mipImages2.GetMetadata();
-
-	Microsoft::WRL::ComPtr <ID3D12Resource> textureResource2 = CreateTextureResource(device, metadata2);
-
-	Microsoft::WRL::ComPtr <ID3D12Resource> intermediateResource2 = UploadTextureData(textureResource2, mipImages2, device, commandList);
-
-	bool useMonsterBall = true;
-
-
-	// shaderResourceViewを作る
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-
-	srvDesc.Format = metadata.format;
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = UINT(metadata.mipLevels);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU = srvHeapManager.GetCPUDescriptorHandle(1);
-	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU = srvHeapManager.GetGPUDescriptorHandle(1);
-
-	device->CreateShaderResourceView(textureResource.Get(), &srvDesc, textureSrvHandleCPU);
-
-
-	// 2枚目のSRVを作る
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc2{};
-
-	srvDesc2.Format = metadata2.format;
-	srvDesc2.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc2.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc2.Texture2D.MipLevels = UINT(metadata2.mipLevels);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU2 = srvHeapManager.GetCPUDescriptorHandle(2);
-	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2 = srvHeapManager.GetGPUDescriptorHandle(2);
-
-	device->CreateShaderResourceView(textureResource2.Get(), &srvDesc2, textureSrvHandleCPU2);
+	// SRVのGPUハンドルはマネージャから取得する
+	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU = textureManager.GetGPUDescriptorHandle("resources/uvChecker.png");
+	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2 = textureManager.GetGPUDescriptorHandle(modelData.material.textureFilePath);
 
 
 	std::unique_ptr<Sprite> sprite = std::make_unique<Sprite>();
@@ -634,10 +521,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	scissorRect.bottom = kClientHeight;
 
+
 	// transform変数を作る
 	Transform transform{ {1.0f,1.0f,1.0f}, {0.0f,0.0f,0.0f},  {0.0f,0.0f,0.0f} };
 
 	Transform cameraTransform{ {1.0f,1.0f,1.0f}, {0.0f,0.0f,0.0f},  {0.0f,0.0f,-10.0f} };
+
 
 	// オーディオ用変数
 	Microsoft::WRL::ComPtr<IXAudio2> xAudio2;
@@ -652,13 +541,16 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	SoundPlayWave(xAudio2.Get(), &soundData1);
 
+
 	// デバックカメラ
 	DebugCamera debugCamera;
 	debugCamera.Initialize();
 
 	bool isDebugCameraActive_ = false;
 
+	bool useMonsterBall = false;
 
+	// マテリアルの初期化
 	materialResourceSprite->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	materialResourceSprite->enabledLighting = 1; 
 	materialResourceSprite->uvTransform = MakeIdentityMatrix();
