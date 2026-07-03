@@ -21,6 +21,7 @@
 #include "ShaderCompiler.h"
 #include "ConstantBuffer.h"
 #include "SwapChain.h"
+#include "DescriptorHeapManager.h"
 
 
 #include"externals/DirectXTex/DirectXTex.h"
@@ -86,18 +87,6 @@ Microsoft::WRL::ComPtr <ID3D12Resource> CreateBufferResource(Microsoft::WRL::Com
 	assert(SUCCEEDED(hr));
 
 	return bufferResource;
-}
-
-Microsoft::WRL::ComPtr <ID3D12DescriptorHeap> CreateDescriptorHeap(Microsoft::WRL::ComPtr <ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible) {
-
-	Microsoft::WRL::ComPtr <ID3D12DescriptorHeap> descriptorHeap = nullptr;
-	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc{};
-	descriptorHeapDesc.Type = heapType;
-	descriptorHeapDesc.NumDescriptors = numDescriptors;
-	descriptorHeapDesc.Flags = shaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	HRESULT hr = device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&descriptorHeap));
-	assert(SUCCEEDED(hr));
-	return descriptorHeap;
 }
 
 // Textureデータを読む
@@ -228,21 +217,6 @@ Matrix4x4 MakeOrthographicMatrix(float left, float top, float right, float botto
 	return result;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE getCPUDescriptorHandle(Microsoft::WRL::ComPtr <ID3D12DescriptorHeap> descriptorHeap, uint32_t descriptorSize, uint32_t index) {
-
-	D3D12_CPU_DESCRIPTOR_HANDLE handleCPU = descriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	handleCPU.ptr += (descriptorSize * index);
-
-	return handleCPU;
-}
-
-D3D12_GPU_DESCRIPTOR_HANDLE getGPUDescriptorHandle(Microsoft::WRL::ComPtr <ID3D12DescriptorHeap> descriptorHeap, uint32_t descriptorSize, uint32_t index) {
-
-	D3D12_GPU_DESCRIPTOR_HANDLE handleGPU = descriptorHeap->GetGPUDescriptorHandleForHeapStart();
-	handleGPU.ptr += (descriptorSize * index);
-
-	return handleGPU;
-}
 
 inline size_t AlignForConstantBuffer(size_t size) {
 	return (size + 255) & ~255;
@@ -285,21 +259,20 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	bool isInitialized = dx12Device.Initialize();
 	assert(isInitialized);
 
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvDescriptorHeap =
-		dx12Device.CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
-
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvDescriptorHeap =
-		dx12Device.CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128, true);
-
 	Microsoft::WRL::ComPtr<ID3D12Device> device = dx12Device.GetDevice();
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList = dx12Device.GetCommandList();
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator = dx12Device.GetCommandAllocator();
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue = dx12Device.GetCommandQueue();
 	Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory = dx12Device.GetDxgiFactory();
 
-	const UINT descriptorSizeSRV = dx12Device.GetDescriptorSizeSRV();
-	const UINT descriptorSizeRTV = dx12Device.GetDescriptorSizeRTV();
-	const UINT descriptorSizeDSV = dx12Device.GetDescriptorSizeDSV();
+	// DescriptorHeapManagerの初期化
+	DescriptorHeapManager rtvHeapManager;
+	DescriptorHeapManager dsvHeapManager;
+	DescriptorHeapManager srvHeapManager;
+
+	rtvHeapManager.Initialize(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
+	dsvHeapManager.Initialize(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
+	srvHeapManager.Initialize(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128, true);
 
 
 #ifdef _DEBUG
@@ -348,21 +321,20 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[2] = {};
 
-	rtvHandles[0] = getCPUDescriptorHandle(rtvDescriptorHeap, descriptorSizeRTV, 0);
-	device->CreateRenderTargetView(swapChain.GetBuffer(0).Get(), &rtvDesc, rtvHandles[0]); // 変更
+	rtvHandles[0] = rtvHeapManager.GetCPUDescriptorHandle(0);
+	device->CreateRenderTargetView(swapChain.GetBuffer(0).Get(), &rtvDesc, rtvHandles[0]);
 
-	rtvHandles[1] = getCPUDescriptorHandle(rtvDescriptorHeap, descriptorSizeRTV, 1);
-	device->CreateRenderTargetView(swapChain.GetBuffer(1).Get(), &rtvDesc, rtvHandles[1]); // 変更
+	rtvHandles[1] = rtvHeapManager.GetCPUDescriptorHandle(1);
+	device->CreateRenderTargetView(swapChain.GetBuffer(1).Get(), &rtvDesc, rtvHandles[1]);
 
 
 	ResourceObject depthStencilResource = CreateDepthStencilTextureResource(device, kClientWidth, kClientHeight);
-
-	Microsoft::WRL::ComPtr <ID3D12DescriptorHeap> dsvDescriptorHeap = CreateDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
-
+	
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
 	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-	device->CreateDepthStencilView(depthStencilResource.Get().Get(), &dsvDesc, getCPUDescriptorHandle(dsvDescriptorHeap, descriptorSizeDSV, 0));
+
+	device->CreateDepthStencilView(depthStencilResource.Get().Get(), &dsvDesc, dsvHeapManager.GetCPUDescriptorHandle(0));
 
 
 
@@ -612,12 +584,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = UINT(metadata.mipLevels);
 
-	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU = getGPUDescriptorHandle(srvDescriptorHeap, descriptorSizeSRV, 1);
-
-	UINT srvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	textureSrvHandleCPU.ptr += srvDescriptorSize;
+	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU = srvHeapManager.GetCPUDescriptorHandle(1);
+	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU = srvHeapManager.GetGPUDescriptorHandle(1);
 
 	device->CreateShaderResourceView(textureResource.Get(), &srvDesc, textureSrvHandleCPU);
 
@@ -630,8 +598,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	srvDesc2.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc2.Texture2D.MipLevels = UINT(metadata2.mipLevels);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU2 = getCPUDescriptorHandle(srvDescriptorHeap, descriptorSizeSRV, 2);
-	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2 = getGPUDescriptorHandle(srvDescriptorHeap, descriptorSizeSRV, 2);
+	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU2 = srvHeapManager.GetCPUDescriptorHandle(2);
+	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2 = srvHeapManager.GetGPUDescriptorHandle(2);
 
 	device->CreateShaderResourceView(textureResource2.Get(), &srvDesc2, textureSrvHandleCPU2);
 
@@ -706,8 +674,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 	ImGui_ImplWin32_Init(hwnd);
-	ImGui_ImplDX12_Init(device.Get(), swapChain.GetBufferCount(), rtvDesc.Format, srvDescriptorHeap.Get(),
-		getCPUDescriptorHandle(srvDescriptorHeap, descriptorSizeSRV, 0), getGPUDescriptorHandle(srvDescriptorHeap, descriptorSizeSRV, 0));
+	ImGui_ImplDX12_Init(device.Get(), swapChain.GetBufferCount(), rtvDesc.Format, srvHeapManager.GetHeap(),
+		srvHeapManager.GetCPUDescriptorHandle(0), srvHeapManager.GetGPUDescriptorHandle(0));
 	ImGuiIO& io = ImGui::GetIO();
 	io.Fonts->Build();
 
@@ -836,7 +804,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 			commandList->ResourceBarrier(1, &barrier);
 
-			D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+			D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvHeapManager.GetCPUDescriptorHandle(0);
 			commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, &dsvHandle);
 			float clearColor[] = { 0.1f, 0.25f, 0.5f, 1.0f };
 			commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
@@ -859,7 +827,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			commandList->SetGraphicsRootConstantBufferView(1, wvpResource.GetGPUVirtualAddress());
 			
 
-			ID3D12DescriptorHeap* descriptorHeaps[] = { srvDescriptorHeap.Get() };
+			ID3D12DescriptorHeap* descriptorHeaps[] = { srvHeapManager.GetHeap() };
 			commandList->SetDescriptorHeaps(1, descriptorHeaps);
 
 			// --- 球体の描画 ---

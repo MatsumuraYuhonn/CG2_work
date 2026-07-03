@@ -94,6 +94,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="CrashHandler.cpp" />
     <ClCompile Include="DebugCamera.cpp" />
+    <ClCompile Include="DescriptorHeapManager.cpp" />
     <ClCompile Include="DeviceInput.cpp" />
     <ClCompile Include="Dx12Device.cpp" />
     <ClCompile Include="externals\imgui\imgui.cpp">
@@ -125,6 +126,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Sound.cpp" />
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="SwapChain.cpp" />
+    <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="Window.cpp" />
     <ClCompile Include="Vector.cpp" />
   </ItemGroup>
@@ -132,6 +134,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="ConstantBuffer.h" />
     <ClInclude Include="CrashHandler.h" />
     <ClInclude Include="DebugCamera.h" />
+    <ClInclude Include="DescriptorHeapManager.h" />
     <ClInclude Include="DeviceInput.h" />
     <ClInclude Include="Dx12Device.h" />
     <ClInclude Include="externals\imgui\imconfig.h" />
@@ -149,6 +152,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Sound.h" />
     <ClInclude Include="Sprite.h" />
     <ClInclude Include="SwapChain.h" />
+    <ClInclude Include="TextureManager.h" />
     <ClInclude Include="Transform.h" />
     <ClInclude Include="Vector.h" />
     <ClInclude Include="Window.h" />
