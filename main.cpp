@@ -18,6 +18,7 @@
 #include "DebugCamera.h"
 #include "Model.h"
 #include "Sprite.h"
+#include "ShaderCompiler.h"
 
 
 #include"externals/DirectXTex/DirectXTex.h"
@@ -64,80 +65,6 @@ private:
 	Microsoft::WRL::ComPtr <ID3D12Resource> resource_;
 
 };
-
-IDxcBlob* CompileShader(const std::wstring& filePath, const wchar_t* profile, IDxcUtils* dxcUtils,
-	IDxcCompiler3* dxcCompiler, IDxcIncludeHandler* includeHandler) {
-
-
-	// ファイルを読む
-	Log(ConvertString(std::format(L"Begin CompileShader, Path:{}, profile:{}\n", filePath, profile)));
-
-	IDxcBlobEncoding* shaderSource = nullptr;
-
-	HRESULT hr = dxcUtils->LoadFile(filePath.c_str(), nullptr, &shaderSource);
-
-	assert(SUCCEEDED(hr));
-
-	DxcBuffer shaderSourceBuffer{};
-	shaderSourceBuffer.Ptr = shaderSource->GetBufferPointer();
-	shaderSourceBuffer.Size = shaderSource->GetBufferSize();
-	shaderSourceBuffer.Encoding = DXC_CP_UTF8;
-
-
-	// コンパイルする
-	LPCWSTR arguments[] = {
-
-		filePath.c_str(),
-		L"-E", L"main",
-		L"-T", profile,
-		L"-Zi", L"-Qembed_debug",
-		L"-Od",
-		L"-Zpr"
-	};
-
-	IDxcResult* shaderResult = nullptr;
-
-	hr = dxcCompiler->Compile(
-		&shaderSourceBuffer,
-		arguments,
-		_countof(arguments),
-		includeHandler,
-		IID_PPV_ARGS(&shaderResult)
-	);
-
-	assert(SUCCEEDED(hr));
-
-
-	// 警告・エラーが出てないか確認する
-	IDxcBlobUtf8* shaderError = nullptr;
-
-	shaderResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&shaderError), nullptr);
-
-	if (shaderError != nullptr && shaderError->GetStringLength() != 0) {
-
-		Log(shaderError->GetStringPointer());
-
-		assert(false);
-
-	}
-
-
-	// コンパイル結果を受け取って返す
-	IDxcBlob* shaderBlob = nullptr;
-
-	hr = shaderResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), nullptr);
-
-	assert(SUCCEEDED(hr));
-
-	Log(ConvertString(std::format(L"Compile Succeeded, path:{}, profile:{}\n", filePath, profile)));
-
-	shaderSource->Release();
-	shaderResult->Release();
-
-	return shaderBlob;
-
-}
-
 
 Microsoft::WRL::ComPtr <ID3D12Resource> CreateBufferResource(Microsoft::WRL::ComPtr <ID3D12Device> device, size_t sizeInBytes) {
 
@@ -203,7 +130,6 @@ DirectX::ScratchImage LoadTexture(const std::string& filePath) {
 // TextureResourceを作る
 Microsoft::WRL::ComPtr <ID3D12Resource> CreateTextureResource(Microsoft::WRL::ComPtr <ID3D12Device> device, const DirectX::TexMetadata& metadata) {
 
-
 	// metadataをもとにresourceの設定
 	D3D12_RESOURCE_DESC resourceDesc{};
 
@@ -215,13 +141,9 @@ Microsoft::WRL::ComPtr <ID3D12Resource> CreateTextureResource(Microsoft::WRL::Co
 	resourceDesc.SampleDesc.Count = 1;
 	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION(metadata.dimension);
 
-
 	// 利用するHeapの設定
 	D3D12_HEAP_PROPERTIES heapProperties{};
 	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-	//heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;
-	//heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
-
 
 	// Resourceの生成
 	Microsoft::WRL::ComPtr <ID3D12Resource> resource = nullptr;
@@ -609,29 +531,18 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
 
-	// DepthStencilStateの設定
-	IDxcUtils* dxcUtils = nullptr;
-	IDxcCompiler3* dxcCompiler = nullptr;
-
-	hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
-	assert(SUCCEEDED(hr));
-
-	hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
-	assert(SUCCEEDED(hr));
-
-	IDxcIncludeHandler* includeHandler = nullptr;
-	hr = dxcUtils->CreateDefaultIncludeHandler(&includeHandler);
-	assert(SUCCEEDED(hr));
+	// ShaderCompilerの初期化
+	std::unique_ptr<ShaderCompiler> shaderCompiler = std::make_unique<ShaderCompiler>();
+	bool isShaderCompilerInit = shaderCompiler->Initialize();
+	assert(isShaderCompilerInit);
 
 
 	// シェーダーのコンパイル
-	IDxcBlob* vertexShaderBlob = CompileShader(L"object3d.VS.hlsl", L"vs_6_0",
-		dxcUtils, dxcCompiler, includeHandler);
+	Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = shaderCompiler->Compile(L"object3d.VS.hlsl", L"vs_6_0");
 
 	assert(vertexShaderBlob != nullptr);
 
-	IDxcBlob* pixelShaderBlob = CompileShader(L"object3d.PS.hlsl", L"ps_6_0",
-		dxcUtils, dxcCompiler, includeHandler);
+	Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = shaderCompiler->Compile(L"object3d.PS.hlsl", L"ps_6_0");
 
 	assert(pixelShaderBlob != nullptr);
 
