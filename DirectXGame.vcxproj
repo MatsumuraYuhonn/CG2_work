@@ -95,9 +95,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="CrashHandler.cpp" />
     <ClCompile Include="DebugCamera.cpp" />
     <ClCompile Include="DescriptorHeapManager.cpp" />
-    <ClCompile Include="DeviceInput.cpp" />
-    <ClCompile Include="DirectionalLight.cpp" />
+    <ClCompile Include="Input.cpp" />
     <ClCompile Include="Dx12Device.cpp" />
+    <ClCompile Include="Engine.cpp" />
     <ClCompile Include="externals\imgui\imgui.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -120,6 +120,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="externals\imgui\imgui_widgets.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="GameScene.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Model.cpp" />
@@ -137,9 +138,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="CrashHandler.h" />
     <ClInclude Include="DebugCamera.h" />
     <ClInclude Include="DescriptorHeapManager.h" />
-    <ClInclude Include="DeviceInput.h" />
-    <ClInclude Include="DirectionalLight.h" />
+    <ClInclude Include="Input.h" />
     <ClInclude Include="Dx12Device.h" />
+    <ClInclude Include="Engine.h" />
     <ClInclude Include="externals\imgui\imconfig.h" />
     <ClInclude Include="externals\imgui\imgui.h" />
     <ClInclude Include="externals\imgui\imgui_impl_dx12.h" />
@@ -148,6 +149,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="externals\imgui\imstb_rectpack.h" />
     <ClInclude Include="externals\imgui\imstb_textedit.h" />
     <ClInclude Include="externals\imgui\imstb_truetype.h" />
+    <ClInclude Include="GameScene.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="Model.h" />

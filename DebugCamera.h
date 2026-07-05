@@ -4,7 +4,7 @@
 #include "Matrix.h"
 #include "Window.h"
 #include "Transform.h"
-#include "DeviceInput.h"
+#include "Input.h"
 
 
 class DebugCamera {
@@ -13,7 +13,7 @@ public:
 
 	void Initialize();
 
-	void Update();
+	void Update(const Input* input);
 
 
 	const Matrix4x4& GetViewMatrix() const { return viewMatrix; }
@@ -24,7 +24,7 @@ private:
 
 	Matrix4x4 cameraMatrix;
 
-	Matrix4x4 viewMatrix;
+	Matrix4x4 viewMatrix{};
 
 	Matrix4x4 projectionMatrix;
 

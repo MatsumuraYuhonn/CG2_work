@@ -22,11 +22,9 @@ public:
     void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, ID3D12Resource* directionalLightResource);
 
 public:
-    Transform transform;
-    Transform uvTransform;
+    Transform transform{};
+    Transform uvTransform{};
     Vector4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-
 
 private:
     Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_;
