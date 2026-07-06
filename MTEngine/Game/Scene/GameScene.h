@@ -5,16 +5,16 @@
 #include <d3d12.h>
 #include <xaudio2.h>
 
-#include "Vector.h"
-#include "Matrix.h"
-#include "Transform.h"
-#include "DebugCamera.h"
-#include "Model.h"
-#include "Sprite.h"
-#include "Sound.h"
-#include "ConstantBuffer.h"
-#include "TextureManager.h"
-#include "DescriptorHeapManager.h"
+#include "MTEngine/Engine/Math/Vector.h"
+#include "MTEngine/Engine/Math/Matrix.h"
+#include "MTEngine/Engine/Math/Transform.h"
+#include "MTEngine/Engine/Debug/DebugCamera.h"
+#include "MTEngine/Engine/Graphics/Model.h"
+#include "MTEngine/Engine/Graphics/Sprite.h"
+#include "MTEngine/Engine/Audio/Sound.h"
+#include "MTEngine/Engine/Graphics/ConstantBuffer.h"
+#include "MTEngine/Engine/Graphics/TextureManager.h"
+#include "MTEngine/Engine/Graphics/DescriptorHeapManager.h"
 
 class GameScene {
 public:

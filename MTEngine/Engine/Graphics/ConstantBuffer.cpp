@@ -1,5 +1,5 @@
 #include "ConstantBuffer.h"
-#include "Vector.h" 
+#include "MTEngine/Engine/Math/Vector.h" 
 #include <cassert>
 
 ConstantBuffer::ConstantBuffer() : mappedData_(nullptr) {}

@@ -1,5 +1,5 @@
 #include "PipelineManager.h"
-#include "Logger.h" 
+#include "MTEngine/Engine/Debug/Logger.h" 
 #include <cassert>
 
 void PipelineManager::Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, ShaderCompiler* shaderCompiler) {
@@ -97,10 +97,10 @@ void PipelineManager::Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, Sh
 
 
     // 3. シェーダーのコンパイル (引数の shaderCompiler を使用)
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = shaderCompiler->Compile(L"object3d.VS.hlsl", L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = shaderCompiler->Compile(L"MTEngine/Engine/Shaders/object3d.VS.hlsl", L"vs_6_0");
     assert(vertexShaderBlob != nullptr);
 
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = shaderCompiler->Compile(L"object3d.PS.hlsl", L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = shaderCompiler->Compile(L"MTEngine/Engine/Shaders/object3d.PS.hlsl", L"ps_6_0");
     assert(pixelShaderBlob != nullptr);
 
 

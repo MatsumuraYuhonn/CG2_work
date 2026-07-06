@@ -3,9 +3,9 @@
 #include <d3d12.h>
 #include <wrl.h>
 #include <cstdint>
-#include "Vector.h"
-#include "Transform.h"
-#include "Matrix.h"
+#include "MTEngine/Engine/Math/Vector.h"
+#include "MTEngine/Engine/Math/Transform.h"
+#include "MTEngine/Engine/Math/Matrix.h"
 
 struct Material {
     Vector4 color;

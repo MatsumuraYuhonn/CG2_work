@@ -1,7 +1,7 @@
 #include "Sprite.h"
 #include <cassert>
 #include "Model.h"
-#include "Matrix.h"
+#include "MTEngine/Engine/Math/Matrix.h"
 
 extern Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t sizeInBytes);
 

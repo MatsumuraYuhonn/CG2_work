@@ -9,19 +9,19 @@
 #include <memory>
 #include <xaudio2.h>
 
-#include "Logger.h"
+#include "MTEngine/Engine/Debug/Logger.h"
 #include "Window.h"
-#include "Vector.h"
-#include "Input.h"
-#include "Sound.h"
+#include "MTEngine/Engine/Math/Vector.h"
+#include "MTEngine/Engine/Input/Input.h"
+#include "MTEngine/Engine/Audio/Sound.h"
 #include "Dx12Device.h"
-#include "Transform.h"
+#include "MTEngine/Engine/Math/Transform.h"
 #include "CrashHandler.h"
 #include "ShaderCompiler.h"
 #include "SwapChain.h"
-#include "DescriptorHeapManager.h"
-#include "PipelineManager.h"
-#include "GameScene.h" 
+#include "MTEngine/Engine/Graphics/DescriptorHeapManager.h"
+#include "MTEngine/Engine/Graphics/PipelineManager.h"
+#include "MTEngine/Game/Scene/GameScene.h" 
 
 #include "externals/DirectXTex/DirectXTex.h"
 #include "externals/DirectXTex/d3dx12.h"

@@ -1,5 +1,5 @@
 #include "ShaderCompiler.h"
-#include "Logger.h"
+#include "MTEngine/Engine/Debug/Logger.h"
 #include <cassert>
 #include <format>
 

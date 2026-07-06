@@ -20,7 +20,7 @@ Matrix4x4 GameScene::MakeOrthographicMatrix(float left, float top, float right, 
 
 void GameScene::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DescriptorHeapManager* srvHeapManager, IXAudio2* xAudio2) {
     // モデル読み込み
-    modelData_ = Model::LoadObjFile("Resources", "axis.obj");
+    modelData_ = Model::LoadObjFile("MTEngine/Game/Resources", "axis.obj");
     model_ = std::make_unique<Model>();
     model_->Initialize(device, modelData_);
 
@@ -31,10 +31,10 @@ void GameScene::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* comm
 
     // テクスチャマネージャとロード
     textureManager_.Initialize(device, srvHeapManager);
-    textureManager_.Load("resources/uvChecker.png", commandList);
+    textureManager_.Load("MTEngine/Game/Resources/uvChecker.png", commandList);
     textureManager_.Load(modelData_.material.textureFilePath, commandList);
 
-    textureSrvHandleGPU_ = textureManager_.GetGPUDescriptorHandle("resources/uvChecker.png");
+    textureSrvHandleGPU_ = textureManager_.GetGPUDescriptorHandle("MTEngine/Game/Resources/uvChecker.png");
     textureSrvHandleGPU2_ = textureManager_.GetGPUDescriptorHandle(modelData_.material.textureFilePath);
 
     // スプライト初期化
@@ -42,7 +42,7 @@ void GameScene::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* comm
     sprite_->Initialize(device, 640, 360, textureSrvHandleGPU_);
 
     // オーディオ読み込みと再生
-    soundData1_ = SoundLoadWave("Resources/Alarm01.wav");
+    soundData1_ = SoundLoadWave("MTEngine/Game/Resources/Alarm01.wav");
     SoundPlayWave(xAudio2, &soundData1_);
 
     // カメラ初期化

@@ -3,7 +3,6 @@
 #include <wrl.h>
 #include "Sprite.h"
 
-
 struct DirectionalLight {
     Vector4 color;
     Vector3 direction;
