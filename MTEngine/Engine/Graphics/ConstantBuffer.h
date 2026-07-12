@@ -3,64 +3,72 @@
 #include <wrl.h>
 #include "Sprite.h"
 
-struct DirectionalLight {
-    Vector4 color;
-    Vector3 direction;
-    float intensity;
-};
+namespace MTEngine {
+
+    struct DirectionalLight {
+        Vector4 color;
+        Vector3 direction;
+        float intensity;
+    };
+
+}
 
 // 定数バッファの基底クラス。リソースの作成とマッピングを管理する
-class ConstantBuffer {
-public:
-    ConstantBuffer();
-    virtual ~ConstantBuffer();
+namespace MTEngine {
 
-    ConstantBuffer(const ConstantBuffer&) = delete;
-    ConstantBuffer& operator=(const ConstantBuffer&) = delete;
+    class ConstantBuffer {
+    public:
+        ConstantBuffer();
+        virtual ~ConstantBuffer();
 
-    // GPU上の仮想アドレスを取得
-    D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const;
+        ConstantBuffer(const ConstantBuffer&) = delete;
+        ConstantBuffer& operator=(const ConstantBuffer&) = delete;
 
-    // リソース本体を取得
-    ID3D12Resource* GetResource() const;
+        // GPU上の仮想アドレスを取得
+        D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const;
 
-protected:
-    // 初期化処理（内部用）
-    bool InitializeInternal(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t sizeInBytes);
-    // マッピング解除
-    void Unmap();
+        // リソース本体を取得
+        ID3D12Resource* GetResource() const;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> resource_;
-    void* mappedData_;
-};
+    protected:
+        // 初期化処理（内部用）
+        bool InitializeInternal(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t sizeInBytes);
+        // マッピング解除
+        void Unmap();
 
-struct Material;
+        Microsoft::WRL::ComPtr<ID3D12Resource> resource_;
+        void* mappedData_;
+    };
 
-// マテリアル用定数バッファ
-class MaterialConstantBuffer : public ConstantBuffer {
-public:
-    bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device);
+    struct Material;
 
-    Material* operator->() { return reinterpret_cast<Material*>(mappedData_); }
-    const Material* operator->() const { return reinterpret_cast<const Material*>(mappedData_); }
-};
+    // マテリアル用定数バッファ
+    class MaterialConstantBuffer : public ConstantBuffer {
+    public:
+        bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device);
 
-struct TransformationMatrix;
+        Material* operator->() { return reinterpret_cast<Material*>(mappedData_); }
+        const Material* operator->() const { return reinterpret_cast<const Material*>(mappedData_); }
+    };
 
-// 変換行列用定数バッファ
-class TransformationMatrixConstantBuffer : public ConstantBuffer {
-public:
-    bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device);
+    struct TransformationMatrix;
 
-    TransformationMatrix* operator->() { return reinterpret_cast<TransformationMatrix*>(mappedData_); }
-    const TransformationMatrix* operator->() const { return reinterpret_cast<const TransformationMatrix*>(mappedData_); }
-};
+    // 変換行列用定数バッファ
+    class TransformationMatrixConstantBuffer : public ConstantBuffer {
+    public:
+        bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device);
 
-// 平行光源用定数バッファ
-class DirectionalLightConstantBuffer : public ConstantBuffer {
-public:
-    bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device);
+        TransformationMatrix* operator->() { return reinterpret_cast<TransformationMatrix*>(mappedData_); }
+        const TransformationMatrix* operator->() const { return reinterpret_cast<const TransformationMatrix*>(mappedData_); }
+    };
 
-    DirectionalLight* operator->() { return reinterpret_cast<DirectionalLight*>(mappedData_); }
-    const DirectionalLight* operator->() const { return reinterpret_cast<const DirectionalLight*>(mappedData_); }
-};
+    // 平行光源用定数バッファ
+    class DirectionalLightConstantBuffer : public ConstantBuffer {
+    public:
+        bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device);
+
+        DirectionalLight* operator->() { return reinterpret_cast<DirectionalLight*>(mappedData_); }
+        const DirectionalLight* operator->() const { return reinterpret_cast<const DirectionalLight*>(mappedData_); }
+    };
+
+}

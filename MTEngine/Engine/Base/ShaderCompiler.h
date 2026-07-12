@@ -6,22 +6,26 @@
 #include <cassert>
 
 // DirectX Shader Compiler (DXC) を使用してシェーダーファイルをコンパイルするクラス
-class ShaderCompiler {
-public:
-    ShaderCompiler();
-    ~ShaderCompiler();
+namespace MTEngine {
 
-    // DXCインターフェースの初期化
-    bool Initialize();
+    class ShaderCompiler {
+    public:
+        ShaderCompiler();
+        ~ShaderCompiler();
 
-    // シェーダーファイルをコンパイルする
-    Microsoft::WRL::ComPtr<IDxcBlob> Compile(
-        const std::wstring& filePath,
-        const wchar_t* profile
-    );
+        // DXCインターフェースの初期化
+        bool Initialize();
 
-private:
-    Microsoft::WRL::ComPtr<IDxcUtils> dxcUtils_ = nullptr;
-    Microsoft::WRL::ComPtr<IDxcCompiler3> dxcCompiler_ = nullptr;
-    Microsoft::WRL::ComPtr<IDxcIncludeHandler> includeHandler_ = nullptr;
-};
+        // シェーダーファイルをコンパイルする
+        Microsoft::WRL::ComPtr<IDxcBlob> Compile(
+            const std::wstring& filePath,
+            const wchar_t* profile
+        );
+
+    private:
+        Microsoft::WRL::ComPtr<IDxcUtils> dxcUtils_ = nullptr;
+        Microsoft::WRL::ComPtr<IDxcCompiler3> dxcCompiler_ = nullptr;
+        Microsoft::WRL::ComPtr<IDxcIncludeHandler> includeHandler_ = nullptr;
+    };
+
+}

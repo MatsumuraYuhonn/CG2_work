@@ -17,59 +17,63 @@
 #include "MTEngine/Engine/Graphics/DescriptorHeapManager.h"
 
 //ゲームシーンを管理するクラス
-class GameScene {
-public:
-    //コンストラクタ
-    GameScene() = default;
-    //デストラクタ
-    ~GameScene() = default;
+namespace MTEngine {
 
-    //初期化
-    void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DescriptorHeapManager* srvHeapManager, IXAudio2* xAudio2);
-    //更新処理
-    void Update(int clientWidth, int clientHeight, const Input* input);
-    //描画処理
-    void Draw(ID3D12GraphicsCommandList* commandList);
-    //終了処理
-    void Finalize();
+    class GameScene {
+    public:
+        //コンストラクタ
+        GameScene() = default;
+        //デストラクタ
+        ~GameScene() = default;
 
-private:
-    //平行投影行列の作成
-    Matrix4x4 MakeOrthographicMatrix(float left, float top, float right, float bottom, float nearClip, float farClip);
+        //初期化
+        void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DescriptorHeapManager* srvHeapManager, IXAudio2* xAudio2);
+        //更新処理
+        void Update(int clientWidth, int clientHeight, const Input* input);
+        //描画処理
+        void Draw(ID3D12GraphicsCommandList* commandList);
+        //終了処理
+        void Finalize();
 
-private:
-    //スプライト用のマテリアル定数バッファ
-    MaterialConstantBuffer materialResourceSprite_;
-    //平行光源用の定数バッファ
-    DirectionalLightConstantBuffer directionalLightResource_;
-    //行列変換用の定数バッファ
-    TransformationMatrixConstantBuffer wvpResource_;
+    private:
+        //平行投影行列の作成
+        Matrix4x4 MakeOrthographicMatrix(float left, float top, float right, float bottom, float nearClip, float farClip);
 
-    //テクスチャマネージャ
-    TextureManager textureManager_;
-    //モデルオブジェクト
-    std::unique_ptr<Model> model_;
-    //スプライトオブジェクト
-    std::unique_ptr<Sprite> sprite_;
-    //テクスチャのGPUデスクリプタハンドル
-    D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU_{};
-    //テクスチャ2のGPUデスクリプタハンドル
-    D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2_{};
+    private:
+        //スプライト用のマテリアル定数バッファ
+        MaterialConstantBuffer materialResourceSprite_;
+        //平行光源用の定数バッファ
+        DirectionalLightConstantBuffer directionalLightResource_;
+        //行列変換用の定数バッファ
+        TransformationMatrixConstantBuffer wvpResource_;
 
-    //オーディオデータ
-    SoundData soundData1_{};
+        //テクスチャマネージャ
+        TextureManager textureManager_;
+        //モデルオブジェクト
+        std::unique_ptr<Model> model_;
+        //スプライトオブジェクト
+        std::unique_ptr<Sprite> sprite_;
+        //テクスチャのGPUデスクリプタハンドル
+        D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU_{};
+        //テクスチャ2のGPUデスクリプタハンドル
+        D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2_{};
 
-    //デバッグカメラ
-    DebugCamera debugCamera_;
-    //オブジェクトのトランスフォーム情報
-    Transform transform_{ {1.0f,1.0f,1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f} };
-    //カメラのトランスフォーム情報
-    Transform cameraTransform_{ {1.0f,1.0f,1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,-10.0f} };
-    //デバッグカメラが有効かどうか
-    bool isDebugCameraActive_ = false;
-    //モンスターボールを使用するかどうか
-    bool useMonsterBall_ = false;
-    //モデルの形状データ
-    ModelData modelData_;
+        //オーディオデータ
+        SoundData soundData1_{};
 
-};
+        //デバッグカメラ
+        DebugCamera debugCamera_;
+        //オブジェクトのトランスフォーム情報
+        Transform transform_{ {1.0f,1.0f,1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f} };
+        //カメラのトランスフォーム情報
+        Transform cameraTransform_{ {1.0f,1.0f,1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,-10.0f} };
+        //デバッグカメラが有効かどうか
+        bool isDebugCameraActive_ = false;
+        //モンスターボールを使用するかどうか
+        bool useMonsterBall_ = false;
+        //モデルの形状データ
+        ModelData modelData_;
+
+    };
+
+}

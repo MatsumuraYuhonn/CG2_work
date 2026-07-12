@@ -5,27 +5,31 @@
 #include "MTEngine/Engine/Base/ShaderCompiler.h"
 
 // グラフィックスパイプラインステート(PSO)およびルートシグネチャの生成・管理を行うクラス
-class PipelineManager {
-public:
-    PipelineManager() = default;
-    ~PipelineManager() = default;
+namespace MTEngine {
 
-    // 初期化処理：ルートシグネチャとPSOの生成を行う
-    // device: D3D12デバイス
-    // shaderCompiler: シェーダーコンパイル用クラス
-    void Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, ShaderCompiler* shaderCompiler);
+    class PipelineManager {
+    public:
+        PipelineManager() = default;
+        ~PipelineManager() = default;
 
-    // コマンドリストにパイプライン状態をバインドする
-    // commandList: 使用するグラフィックスコマンドリスト
-    void Bind(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
+        // 初期化処理：ルートシグネチャとPSOの生成を行う
+        // device: D3D12デバイス
+        // shaderCompiler: シェーダーコンパイル用クラス
+        void Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, ShaderCompiler* shaderCompiler);
 
-    // ルートシグネチャを取得
-    ID3D12RootSignature* GetRootSignature() const { return rootSignature_.Get(); }
+        // コマンドリストにパイプライン状態をバインドする
+        // commandList: 使用するグラフィックスコマンドリスト
+        void Bind(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
 
-    // PSOを取得
-    ID3D12PipelineState* GetPipelineState() const { return graphicsPipelineState_.Get(); }
+        // ルートシグネチャを取得
+        ID3D12RootSignature* GetRootSignature() const { return rootSignature_.Get(); }
 
-private:
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature_ = nullptr;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState_ = nullptr;
-};
+        // PSOを取得
+        ID3D12PipelineState* GetPipelineState() const { return graphicsPipelineState_.Get(); }
+
+    private:
+        Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature_ = nullptr;
+        Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState_ = nullptr;
+    };
+
+}

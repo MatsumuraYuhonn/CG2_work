@@ -6,49 +6,58 @@
 #include "MTEngine/Engine/Math/Vector.h" 
 
 // 頂点データ構造
-struct VertexData {
-    Vector4 position;
-    Vector2 texcoord;
-    Vector3 normal;
-};
+namespace MTEngine {
 
-// マテリアルデータ
-struct MaterialData {
-    std::string textureFilePath;
-};
+    struct VertexData {
+        Vector4 position;
+        Vector2 texcoord;
+        Vector3 normal;
+    };
 
-// モデルデータ全体
-struct ModelData {
-    std::vector<VertexData> vertices;
-    MaterialData material;
-};
+    // マテリアルデータ
+    struct MaterialData {
+        std::string textureFilePath;
+    };
+
+    // モデルデータ全体
+    struct ModelData {
+        std::vector<VertexData> vertices;
+        MaterialData material;
+    };
+
+}
+
 
 // 3Dモデルリソースの管理と描画を行うクラス
-class Model {
-public:
-    // OBJファイルの読み込み
-    static ModelData LoadObjFile(const std::string& directoryPath, const std::string& filename);
+namespace MTEngine {
 
-    Model();
-    ~Model();
+    class Model {
+    public:
+        // OBJファイルの読み込み
+        static ModelData LoadObjFile(const std::string& directoryPath, const std::string& filename);
 
-    // 頂点バッファの初期化
-    bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, const ModelData& modelData);
+        Model();
+        ~Model();
 
-    // 描画実行
-    void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
+        // 頂点バッファの初期化
+        bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, const ModelData& modelData);
 
-    // テクスチャパスの取得
-    const std::string& GetTextureFilePath() const { return modelData_.material.textureFilePath; }
+        // 描画実行
+        void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
 
-private:
-    // マテリアルファイルの読み込み
-    static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
+        // テクスチャパスの取得
+        const std::string& GetTextureFilePath() const { return modelData_.material.textureFilePath; }
 
-    // バッファリソースの生成
-    Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t sizeInBytes);
+    private:
+        // マテリアルファイルの読み込み
+        static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
 
-    ModelData modelData_;
-    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_ = nullptr;
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView_{};
-};
+        // バッファリソースの生成
+        Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t sizeInBytes);
+
+        ModelData modelData_;
+        Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_ = nullptr;
+        D3D12_VERTEX_BUFFER_VIEW vertexBufferView_{};
+    };
+
+}

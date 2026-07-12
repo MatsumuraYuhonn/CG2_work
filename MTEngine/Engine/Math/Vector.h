@@ -1,25 +1,29 @@
 #pragma once
 
-// 4次元ベクトル
-struct Vector4 {
-    float x, y, z, w;
-};
+namespace MTEngine {
 
-// 3次元ベクトル
-struct Vector3 {
-    float x, y, z;
-};
+    // 4次元ベクトル
+    struct Vector4 {
+        float x, y, z, w;
+    };
 
-// 2次元ベクトル
-struct Vector2 {
-    float x, y;
-};
+    // 3次元ベクトル
+    struct Vector3 {
+        float x, y, z;
+    };
 
-// Matrix4x4の前方宣言
-struct Matrix4x4;
+    // 2次元ベクトル
+    struct Vector2 {
+        float x, y;
+    };
 
-// ベクトルの加算
-Vector3 Add(const Vector3& v1, const Vector3& v2);
+    // Matrix4x4の前方宣言
+    struct Matrix4x4;
 
-// 法線ベクトルの変換
-Vector3 TransformNormal(const Vector3& v, const Matrix4x4& m);
+    // ベクトルの加算
+    Vector3 Add(const Vector3& v1, const Vector3& v2);
+
+    // 法線ベクトルの変換
+    Vector3 TransformNormal(const Vector3& v, const Matrix4x4& m);
+
+}
