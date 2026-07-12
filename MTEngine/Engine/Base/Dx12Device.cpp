@@ -89,35 +89,6 @@ void Dx12Device::WaitForGPU() {
     }
 }
 
-
-Microsoft::WRL::ComPtr<ID3D12Resource> Dx12Device::CreateBufferResource(size_t sizeInBytes) {
-
-    D3D12_HEAP_PROPERTIES uploadHeapProperties{};
-    uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-    D3D12_RESOURCE_DESC bufferResourceDesc{};
-    bufferResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    bufferResourceDesc.Width = sizeInBytes;
-    bufferResourceDesc.Height = 1;
-    bufferResourceDesc.DepthOrArraySize = 1;
-    bufferResourceDesc.MipLevels = 1;
-    bufferResourceDesc.SampleDesc.Count = 1;
-    bufferResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> bufferResource = nullptr;
-    HRESULT hr = device_->CreateCommittedResource(
-        &uploadHeapProperties,
-        D3D12_HEAP_FLAG_NONE,
-        &bufferResourceDesc,
-        D3D12_RESOURCE_STATE_GENERIC_READ,
-        nullptr,
-        IID_PPV_ARGS(&bufferResource)
-    );
-    assert(SUCCEEDED(hr));
-
-    return bufferResource;
-}
-
 Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> Dx12Device::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible) {
 
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap = nullptr;
@@ -128,4 +99,43 @@ Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> Dx12Device::CreateDescriptorHeap(D3
     HRESULT hr = device_->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&descriptorHeap));
     assert(SUCCEEDED(hr));
     return descriptorHeap;
+}
+
+Microsoft::WRL::ComPtr<ID3D12Resource> Dx12Device::CreateBufferResource(
+    ID3D12Device* pDevice,
+    size_t sizeInBytes
+) {
+    assert(pDevice != nullptr && "Device pointer is null.");
+
+    D3D12_HEAP_PROPERTIES heapProps = {};
+    heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+    heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    heapProps.CreationNodeMask = 1;
+    heapProps.VisibleNodeMask = 1;
+
+    D3D12_RESOURCE_DESC resDesc = {};
+    resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    resDesc.Width = sizeInBytes;
+    resDesc.Height = 1;
+    resDesc.DepthOrArraySize = 1;
+    resDesc.MipLevels = 1;
+    resDesc.Format = DXGI_FORMAT_UNKNOWN;
+    resDesc.SampleDesc.Count = 1;
+    resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> pBufferResource;
+    HRESULT hr = pDevice->CreateCommittedResource(
+        &heapProps,
+        D3D12_HEAP_FLAG_NONE,
+        &resDesc,
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        IID_PPV_ARGS(&pBufferResource)
+    );
+
+    // assert で成否を確認
+    assert(SUCCEEDED(hr) && "Failed to create D3D12 committed resource.");
+
+    return pBufferResource;
 }
