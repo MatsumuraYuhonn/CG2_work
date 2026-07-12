@@ -61,7 +61,7 @@ SoundData SoundLoadWave(const char* filename) {
 	SoundData soundData = {};
 
 	soundData.wfex = format.fmt;
-	soundData.pBUffer = reinterpret_cast<BYTE*>(pBuffer);
+	soundData.pBuffer = reinterpret_cast<BYTE*>(pBuffer);
 	soundData.bufferSize = data.size;
 
 	return soundData;
@@ -70,9 +70,9 @@ SoundData SoundLoadWave(const char* filename) {
 
 void SoundUnload(SoundData* soundData) {
 
-	delete[] soundData->pBUffer;
+	delete[] soundData->pBuffer;
 
-	soundData->pBUffer = nullptr;
+	soundData->pBuffer = nullptr;
 	soundData->bufferSize = 0;
 	soundData->wfex = {};
 
@@ -87,7 +87,7 @@ void SoundPlayWave(IXAudio2* xAudio2, const SoundData* soundData) {
 	assert(SUCCEEDED(result));
 
 	XAUDIO2_BUFFER buf{};
-	buf.pAudioData = soundData->pBUffer;
+	buf.pAudioData = soundData->pBuffer;
 	buf.AudioBytes = soundData->bufferSize;
 	buf.Flags = XAUDIO2_END_OF_STREAM;
 

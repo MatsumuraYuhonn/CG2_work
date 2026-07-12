@@ -1,6 +1,6 @@
 #include "object3d.hlsli"
 
-struct TranceformationMatrix {
+struct TransformationMatrix {
     
     float4x4 WVP;
     
@@ -9,7 +9,7 @@ struct TranceformationMatrix {
 };
 
 
-ConstantBuffer<TranceformationMatrix> gTranceformationMatrix : register(b1);
+ConstantBuffer<TransformationMatrix> gTransformationMatrix : register(b1);
 
 ConstantBuffer<Material> gMaterial : register(b0); 
 
@@ -28,11 +28,11 @@ VertexShaderOutput main(VertexShaderInput input) {
     
     VertexShaderOutput output;
     
-    output.position = mul(input.position, gTranceformationMatrix.WVP);
+    output.position = mul(input.position, gTransformationMatrix.WVP);
     
     output.texcoord = TransformUV(input.texcoord, gMaterial.uvTransform);
     
-    output.normal = normalize(mul(input.normal, (float3x3) gTranceformationMatrix.World));
+    output.normal = normalize(mul(input.normal, (float3x3) gTransformationMatrix.World));
     
     return output;
     
