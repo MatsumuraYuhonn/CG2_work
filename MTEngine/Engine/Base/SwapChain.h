@@ -3,7 +3,9 @@
 #include <dxgi1_6.h>
 #include <wrl.h>
 #include <cstdint>
+#include <cassert>
 
+// スワップチェーン（フロント・バックバッファ）の管理クラス
 class SwapChain {
 public:
     SwapChain() = default;

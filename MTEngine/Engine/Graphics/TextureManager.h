@@ -3,11 +3,12 @@
 #include <wrl.h>
 #include <string>
 #include <unordered_map>
+#include <vector>
 #include "externals/DirectXTex/DirectXTex.h"
 
-// 前方宣言（循環参照防止）
 class DescriptorHeapManager;
 
+// テクスチャリソースおよびSRVを管理するクラス
 class TextureManager {
 public:
     struct TextureData {
@@ -17,19 +18,26 @@ public:
         D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU;
     };
 
-    // シングルトンにするか、通常のインスタンスにするかはお好みで。ここでは通常クラスとして定義
+    // 初期化
     void Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, DescriptorHeapManager* srvHeapManager);
 
-    // テクスチャを読み込んでSRVまで作成する
+    // ファイルからテクスチャを読み込み、リソースおよびSRVを作成する
+    // filePath: 読み込むファイルのパス
+    // commandList: コピー転送に使用するコマンドリスト
     void Load(const std::string& filePath, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
 
-    // GPUハンドルを取得する
+    // 指定したパスのテクスチャに対応するGPUディスクリプタハンドルを取得
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(const std::string& filePath) const;
 
 private:
-    // main.cpp から移植する内部関数
+    // テクスチャファイルをロード
     DirectX::ScratchImage LoadTextureFile(const std::string& filePath);
+
+    // テクスチャ用GPUリソースの生成
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateTextureResource(const DirectX::TexMetadata& metadata);
+
+    // テクスチャデータをCPUからGPUへアップロードする
+    // 戻り値: 転送完了まで生存させる中間リソース
     [[nodiscard]]
     Microsoft::WRL::ComPtr<ID3D12Resource> UploadTextureData(
         Microsoft::WRL::ComPtr<ID3D12Resource> texture,
@@ -40,9 +48,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Device> device_ = nullptr;
     DescriptorHeapManager* srvHeapManager_ = nullptr;
 
-    // ファイルパスをキーにしてテクスチャデータを管理
+    // ファイルパスをキーにしたテクスチャ管理マップ
     std::unordered_map<std::string, TextureData> textures_;
 
-    // 中間リソースが消えないようにループの最後まで保持する用（必要に応じてリセットする仕組みにしてもOK）
+    // アップロード用中間リソースの保持（生存期間管理）
     std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> intermediateResources_;
 };

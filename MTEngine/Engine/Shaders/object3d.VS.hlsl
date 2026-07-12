@@ -1,39 +1,36 @@
 #include "object3d.hlsli"
 
-struct TransformationMatrix {
-    
-    float4x4 WVP;
-    
-    float4x4 World;
-    
-};
+// 変換行列用定数バッファ
+    struct TransformationMatrix
+    {
+        float4x4 WVP;
+        float4x4 World;
+    };
 
+    ConstantBuffer<TransformationMatrix> gTransformationMatrix : register(b1);
+    ConstantBuffer<Material> gMaterial : register(b0);
 
-ConstantBuffer<TransformationMatrix> gTransformationMatrix : register(b1);
+// 入力頂点データ
+    struct VertexShaderInput
+    {
+        float4 position : POSITION;
+        float2 texcoord : TEXCOORD;
+        float3 normal : NORMAL;
+    };
 
-ConstantBuffer<Material> gMaterial : register(b0); 
-
-struct VertexShaderInput
-{
+// 頂点シェーダーメイン処理
+    VertexShaderOutput main(VertexShaderInput input)
+    {
+        VertexShaderOutput output;
     
-    float4 position : POSITION;
+    // 位置の変換（WVP行列を使用）
+        output.position = mul(input.position, gTransformationMatrix.WVP);
     
-    float2 texcoord : TEXCOORD;
+    // UVの変換
+        output.texcoord = TransformUV(input.texcoord, gMaterial.uvTransform);
     
-    float3 normal : NORMAL;
+    // 法線の変換（ワールド行列の3x3部分を使用）
+        output.normal = normalize(mul(input.normal, (float3x3) gTransformationMatrix.World));
     
-};
-
-VertexShaderOutput main(VertexShaderInput input) {
-    
-    VertexShaderOutput output;
-    
-    output.position = mul(input.position, gTransformationMatrix.WVP);
-    
-    output.texcoord = TransformUV(input.texcoord, gMaterial.uvTransform);
-    
-    output.normal = normalize(mul(input.normal, (float3x3) gTransformationMatrix.World));
-    
-    return output;
-    
-}
+        return output;
+    }

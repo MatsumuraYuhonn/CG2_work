@@ -9,7 +9,7 @@ struct DirectionalLight {
     float intensity;
 };
 
-
+// 定数バッファの基底クラス。リソースの作成とマッピングを管理する
 class ConstantBuffer {
 public:
     ConstantBuffer();
@@ -18,22 +18,25 @@ public:
     ConstantBuffer(const ConstantBuffer&) = delete;
     ConstantBuffer& operator=(const ConstantBuffer&) = delete;
 
+    // GPU上の仮想アドレスを取得
     D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const;
 
+    // リソース本体を取得
     ID3D12Resource* GetResource() const;
 
 protected:
-
+    // 初期化処理（内部用）
     bool InitializeInternal(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t sizeInBytes);
+    // マッピング解除
     void Unmap();
 
     Microsoft::WRL::ComPtr<ID3D12Resource> resource_;
-    void* mappedData_; 
+    void* mappedData_;
 };
-
 
 struct Material;
 
+// マテリアル用定数バッファ
 class MaterialConstantBuffer : public ConstantBuffer {
 public:
     bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device);
@@ -44,6 +47,7 @@ public:
 
 struct TransformationMatrix;
 
+// 変換行列用定数バッファ
 class TransformationMatrixConstantBuffer : public ConstantBuffer {
 public:
     bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device);
@@ -52,8 +56,7 @@ public:
     const TransformationMatrix* operator->() const { return reinterpret_cast<const TransformationMatrix*>(mappedData_); }
 };
 
-struct DirectionalLight;
-
+// 平行光源用定数バッファ
 class DirectionalLightConstantBuffer : public ConstantBuffer {
 public:
     bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device);

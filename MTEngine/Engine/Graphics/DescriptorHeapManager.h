@@ -3,6 +3,7 @@
 #include <wrl.h>
 #include <cstdint>
 
+// デスクリプタヒープの生成およびハンドル取得を管理するクラス
 class DescriptorHeapManager {
 public:
     DescriptorHeapManager() = default;
@@ -16,11 +17,12 @@ public:
         bool shaderVisible
     );
 
-    // 各種ゲッター
+    // ヒープ本体を取得
     ID3D12DescriptorHeap* GetHeap() const { return descriptorHeap_.Get(); }
+    // デスクリプタのサイズを取得
     UINT GetDescriptorSize() const { return descriptorSize_; }
 
-    // インデックスに応じたハンドルを取得する
+    // インデックスに応じたCPU/GPUハンドルを取得
     D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(uint32_t index) const;
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(uint32_t index) const;
 

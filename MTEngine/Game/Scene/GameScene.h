@@ -16,43 +16,60 @@
 #include "MTEngine/Engine/Graphics/TextureManager.h"
 #include "MTEngine/Engine/Graphics/DescriptorHeapManager.h"
 
+//ゲームシーンを管理するクラス
 class GameScene {
 public:
+    //コンストラクタ
     GameScene() = default;
+    //デストラクタ
     ~GameScene() = default;
 
-    // 初期化・更新・描画
+    //初期化
     void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DescriptorHeapManager* srvHeapManager, IXAudio2* xAudio2);
-    void Update(int clientWidth, int clientHeight, const Input* input); 
+    //更新処理
+    void Update(int clientWidth, int clientHeight, const Input* input);
+    //描画処理
     void Draw(ID3D12GraphicsCommandList* commandList);
+    //終了処理
     void Finalize();
 
 private:
-    // 内部補助関数（Engineから移行）
+    //平行投影行列の作成
     Matrix4x4 MakeOrthographicMatrix(float left, float top, float right, float bottom, float nearClip, float farClip);
 
 private:
-    // 定数バッファ
+    //スプライト用のマテリアル定数バッファ
     MaterialConstantBuffer materialResourceSprite_;
+    //平行光源用の定数バッファ
     DirectionalLightConstantBuffer directionalLightResource_;
+    //行列変換用の定数バッファ
     TransformationMatrixConstantBuffer wvpResource_;
 
-    // マネージャ経由のゲームリソース
+    //テクスチャマネージャ
     TextureManager textureManager_;
+    //モデルオブジェクト
     std::unique_ptr<Model> model_;
+    //スプライトオブジェクト
     std::unique_ptr<Sprite> sprite_;
+    //テクスチャのGPUデスクリプタハンドル
     D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU_{};
+    //テクスチャ2のGPUデスクリプタハンドル
     D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2_{};
 
-    // オーディオ (データと再生コントロール)
+    //オーディオデータ
     SoundData soundData1_{};
 
-    // カメラ・シーン制御変数
+    //デバッグカメラ
     DebugCamera debugCamera_;
+    //オブジェクトのトランスフォーム情報
     Transform transform_{ {1.0f,1.0f,1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f} };
+    //カメラのトランスフォーム情報
     Transform cameraTransform_{ {1.0f,1.0f,1.0f}, {0.0f,0.0f,0.0f}, {0.0f,0.0f,-10.0f} };
+    //デバッグカメラが有効かどうか
     bool isDebugCameraActive_ = false;
+    //モンスターボールを使用するかどうか
     bool useMonsterBall_ = false;
+    //モデルの形状データ
     ModelData modelData_;
 
 };

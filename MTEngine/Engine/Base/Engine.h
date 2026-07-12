@@ -8,6 +8,7 @@
 #include <wrl.h>
 #include <memory>
 #include <xaudio2.h>
+#include <cassert>
 
 #include "MTEngine/Engine/Debug/Logger.h"
 #include "Window.h"
@@ -28,6 +29,7 @@
 
 #pragma comment(lib, "dxcompiler.lib")
 
+// DirectX12のリソースリークをデバッグビルド時に検知するヘルパークラス
 struct D3DResourceLeakChecker {
     ~D3DResourceLeakChecker() {
         Microsoft::WRL::ComPtr<IDXGIDebug1> debug;
@@ -39,6 +41,7 @@ struct D3DResourceLeakChecker {
     }
 };
 
+// ID3D12Resourceをラップして管理するクラス
 class ResourceObject {
 public:
     ResourceObject() : resource_(nullptr) {}
@@ -56,9 +59,10 @@ private:
 Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t sizeInBytes);
 Microsoft::WRL::ComPtr<ID3D12Resource> CreateDepthStencilTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height);
 inline size_t AlignForConstantBuffer(size_t size) {
-    return (size + 255) & ~255;
+    return (size + 255) & ~255; // 256バイトアライメント
 }
 
+// ゲームエンジンのメインクラス。全システムの初期化・更新・描画を統括する
 class Engine {
 public:
     Engine() = default;
@@ -73,12 +77,8 @@ private:
     void Update();
     void Draw();
 
-
     HWND hwnd_ = nullptr;
-
-
     std::unique_ptr<Input> input_;
-
 
     // 1. リークチェック（最上部で定義し、一番最後に解放されるようにする）
     D3DResourceLeakChecker leakCheck_;
@@ -107,5 +107,5 @@ private:
     IXAudio2MasteringVoice* masterVoice_ = nullptr;
 
     // 7. ゲームシーン
-    std::unique_ptr<GameScene> gameScene_; // ★ゲームループで回すシーンオブジェクト
+    std::unique_ptr<GameScene> gameScene_;
 };

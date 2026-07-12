@@ -1,9 +1,9 @@
 #pragma once
-#include"Vector.h"
+#include "Vector.h"
 
-
+// トランスフォーム情報構造体
 struct Transform {
-	Vector3 scale;
-	Vector3 rotate;
-	Vector3 translate;
+    Vector3 scale;      // スケール
+    Vector3 rotate;     // 回転（オイラー角）
+    Vector3 translate;  // 平行移動
 };

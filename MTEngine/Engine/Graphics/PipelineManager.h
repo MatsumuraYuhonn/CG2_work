@@ -4,19 +4,25 @@
 #include <memory>
 #include "MTEngine/Engine/Base/ShaderCompiler.h"
 
+// グラフィックスパイプラインステート(PSO)およびルートシグネチャの生成・管理を行うクラス
 class PipelineManager {
 public:
     PipelineManager() = default;
     ~PipelineManager() = default;
 
-    // 初期化: ルートシグネチャとPSOの生成
+    // 初期化処理：ルートシグネチャとPSOの生成を行う
+    // device: D3D12デバイス
+    // shaderCompiler: シェーダーコンパイル用クラス
     void Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, ShaderCompiler* shaderCompiler);
 
-    // コマンドリストへの適用
+    // コマンドリストにパイプライン状態をバインドする
+    // commandList: 使用するグラフィックスコマンドリスト
     void Bind(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
 
-    // 必要に応じてゲッターも用意
+    // ルートシグネチャを取得
     ID3D12RootSignature* GetRootSignature() const { return rootSignature_.Get(); }
+
+    // PSOを取得
     ID3D12PipelineState* GetPipelineState() const { return graphicsPipelineState_.Get(); }
 
 private:
