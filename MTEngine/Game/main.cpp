@@ -1,20 +1,19 @@
 #include "MTEngine/Engine/Base/Engine.h"
 
-namespace MTEngine {
+//Windowsアプリケーションのエントリーポイント
+int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
-    //Windowsアプリケーションのエントリーポイント
-    int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
-        //エンジン本体の生成
-        std::unique_ptr<Engine> engine = std::make_unique<Engine>();
+	//エンジン本体の生成
+	std::unique_ptr<MTEngine::Engine> engine = std::make_unique<MTEngine::Engine>();
 
-        //エンジンの初期化
-        engine->Initialize();
-        //メインループの実行
-        engine->Run();
-        //エンジンの終了処理
-        engine->Finalize();
+	//エンジンの初期化
+	engine->Initialize();
+	//メインループの実行
+	engine->Run();
+	//エンジンの終了処理
+	engine->Finalize();
 
-        return 0;
-    }
+	return 0;
+
 
 }

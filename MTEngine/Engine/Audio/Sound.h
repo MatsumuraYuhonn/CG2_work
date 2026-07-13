@@ -3,36 +3,40 @@
 #pragma comment(lib, "xaudio2.lib")
 #include<fstream>
 
-// RIFF形式のチャンクヘッダー
-struct ChunkHeader {
-	char id[4];    // チャンクID ("RIFF", "fmt ", "data"など)
-	int32_t size;  // チャンクサイズ
-};
+namespace MTEngine {
 
-// RIFFファイルの先頭ヘッダー
-struct RiffHeader {
-	ChunkHeader chunk;
-	char type[4];  // ファイルタイプ ("WAVE")
-};
+	// RIFF形式のチャンクヘッダー
+	struct ChunkHeader {
+		char id[4];    // チャンクID ("RIFF", "fmt ", "data"など)
+		int32_t size;  // チャンクサイズ
+	};
 
-// fmtチャンク（音声フォーマット情報）
-struct FormatChunk {
-	ChunkHeader chunk;
-	WAVEFORMATEX fmt;
-};
+	// RIFFファイルの先頭ヘッダー
+	struct RiffHeader {
+		ChunkHeader chunk;
+		char type[4];  // ファイルタイプ ("WAVE")
+	};
 
-// ロードされた音声データの保持構造体
-struct SoundData {
-	WAVEFORMATEX wfex;     // 音声フォーマット情報
-	BYTE* pBuffer;         // 波形データ本体へのポインタ
-	unsigned int bufferSize; // データサイズ
-};
+	// fmtチャンク（音声フォーマット情報）
+	struct FormatChunk {
+		ChunkHeader chunk;
+		WAVEFORMATEX fmt;
+	};
 
-// WAVファイルをメモリに読み込む
-SoundData SoundLoadWave(const char* filename);
+	// ロードされた音声データの保持構造体
+	struct SoundData {
+		WAVEFORMATEX wfex;     // 音声フォーマット情報
+		BYTE* pBuffer;         // 波形データ本体へのポインタ
+		unsigned int bufferSize; // データサイズ
+	};
 
-// メモリにロードされた音声データを解放する
-void SoundUnload(SoundData* soundData);
+	// WAVファイルをメモリに読み込む
+	SoundData SoundLoadWave(const char* filename);
 
-// XAudio2を使用して音声データを再生する
-void SoundPlayWave(IXAudio2* xAudio2, const SoundData* soundData);
+	// メモリにロードされた音声データを解放する
+	void SoundUnload(SoundData* soundData);
+
+	// XAudio2を使用して音声データを再生する
+	void SoundPlayWave(IXAudio2* xAudio2, const SoundData* soundData);
+
+}
