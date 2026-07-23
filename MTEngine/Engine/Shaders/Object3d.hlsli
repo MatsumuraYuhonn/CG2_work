@@ -12,6 +12,7 @@ struct Material
     float4 color; // スプライトの色
     int enabledLighting; // ライティングの有効フラグ
     float4x4 uvTransform; // UV変換用行列
+    int lightingMode;
 
 };
     

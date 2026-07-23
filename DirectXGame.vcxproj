@@ -108,6 +108,8 @@
     <ClInclude Include="externals\imgui\imstb_rectpack.h" />
     <ClInclude Include="externals\imgui\imstb_textedit.h" />
     <ClInclude Include="externals\imgui\imstb_truetype.h" />
+    <ClInclude Include="MTEngine\Engine\Audio\Audio.h" />
+    <ClInclude Include="MTEngine\Engine\Audio\AudioManager.h" />
     <ClInclude Include="MTEngine\Engine\Audio\Sound.h" />
     <ClInclude Include="MTEngine\Engine\Base\CrashHandler.h" />
     <ClInclude Include="MTEngine\Engine\Base\Dx12Device.h" />
@@ -116,11 +118,14 @@
     <ClInclude Include="MTEngine\Engine\Base\SwapChain.h" />
     <ClInclude Include="MTEngine\Engine\Base\Window.h" />
     <ClInclude Include="MTEngine\Engine\Debug\DebugCamera.h" />
+    <ClInclude Include="MTEngine\Engine\Debug\ImGuiManager.h" />
     <ClInclude Include="MTEngine\Engine\Debug\Logger.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\ConstantBuffer.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\DescriptorHeapManager.h" />
+    <ClInclude Include="MTEngine\Engine\Graphics\GraphicsManager.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\Model.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\PipelineManager.h" />
+    <ClInclude Include="MTEngine\Engine\Graphics\Renderer.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\Sprite.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\TextureManager.h" />
     <ClInclude Include="MTEngine\Engine\Input\Input.h" />
@@ -137,6 +142,8 @@
     <ClCompile Include="externals\imgui\imgui_impl_win32.cpp" />
     <ClCompile Include="externals\imgui\imgui_tables.cpp" />
     <ClCompile Include="externals\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="MTEngine\Engine\Audio\Audio.cpp" />
+    <ClCompile Include="MTEngine\Engine\Audio\AudioManager.cpp" />
     <ClCompile Include="MTEngine\Engine\Audio\Sound.cpp" />
     <ClCompile Include="MTEngine\Engine\Base\CrashHandler.cpp" />
     <ClCompile Include="MTEngine\Engine\Base\Dx12Device.cpp" />
@@ -145,11 +152,14 @@
     <ClCompile Include="MTEngine\Engine\Base\SwapChain.cpp" />
     <ClCompile Include="MTEngine\Engine\Base\Window.cpp" />
     <ClCompile Include="MTEngine\Engine\Debug\DebugCamera.cpp" />
+    <ClCompile Include="MTEngine\Engine\Debug\ImGuiManager.cpp" />
     <ClCompile Include="MTEngine\Engine\Debug\Logger.cpp" />
     <ClCompile Include="MTEngine\Engine\Graphics\ConstantBuffer.cpp" />
     <ClCompile Include="MTEngine\Engine\Graphics\DescriptorHeapManager.cpp" />
+    <ClCompile Include="MTEngine\Engine\Graphics\GraphicsManager.cpp" />
     <ClCompile Include="MTEngine\Engine\Graphics\Model.cpp" />
     <ClCompile Include="MTEngine\Engine\Graphics\PipelineManager.cpp" />
+    <ClCompile Include="MTEngine\Engine\Graphics\Renderer.cpp" />
     <ClCompile Include="MTEngine\Engine\Graphics\Sprite.cpp" />
     <ClCompile Include="MTEngine\Engine\Graphics\TextureManager.cpp" />
     <ClCompile Include="MTEngine\Engine\Input\Input.cpp" />

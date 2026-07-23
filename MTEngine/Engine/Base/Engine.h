@@ -23,6 +23,10 @@
 #include "MTEngine/Engine/Graphics/DescriptorHeapManager.h"
 #include "MTEngine/Engine/Graphics/PipelineManager.h"
 #include "MTEngine/Game/Scene/GameScene.h" 
+#include "MTEngine/Engine/Debug/ImGuiManager.h"
+#include "MTEngine/Engine/Audio/AudioManager.h"
+#include "MTEngine/Engine/Graphics/Renderer.h"
+
 
 #include "externals/DirectXTex/DirectXTex.h"
 #include "externals/DirectXTex/d3dx12.h"
@@ -93,26 +97,16 @@ namespace MTEngine {
         Dx12Device dx12Device_;
         SwapChain swapChain_;
 
-        // 3. デスクリプタヒープマネージャ
-        DescriptorHeapManager rtvHeapManager_;
-        DescriptorHeapManager dsvHeapManager_;
-        DescriptorHeapManager srvHeapManager_;
-
-        // 4. パイプライン・シェーダ関連
+        // 3. パイプライン・シェーダ・レンダラー関連
         std::unique_ptr<ShaderCompiler> shaderCompiler_;
         std::unique_ptr<PipelineManager> pipelineManager_;
+        std::unique_ptr<Renderer> renderer_;
+        std::unique_ptr<ImGuiManager> imGuiManager_;
 
-        // 5. リソース・バッファ関連（描画基盤として維持）
-        ResourceObject depthStencilResource_ = nullptr;
-        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles_[2] = {};
-        D3D12_VIEWPORT viewport_{};
-        D3D12_RECT scissorRect_{};
+        // 4. オーディオ基盤
+        std::unique_ptr<AudioManager> audioManager_;
 
-        // 6. オーディオ基盤
-        Microsoft::WRL::ComPtr<IXAudio2> xAudio2_;
-        IXAudio2MasteringVoice* masterVoice_ = nullptr;
-
-        // 7. ゲームシーン
+        // 5. ゲームシーン
         std::unique_ptr<GameScene> gameScene_;
     };
 

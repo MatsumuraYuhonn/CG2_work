@@ -22,28 +22,35 @@
         float4 color : SV_TARGET0;
     };
 
-// ピクセルシェーダーメイン処理
-    PixelShaderOutput main(VertexShaderOutput input)
+
+PixelShaderOutput main(VertexShaderOutput input)
+{
+    PixelShaderOutput output;
+    float4 textureColor = gTexture.Sample(gSampler, input.texcoord);
+
+    // ライティングが有効、かつモードがNone（0）でない場合にライティング計算を行う
+    if (gMaterial.enabledLighting != 0 && gMaterial.lightingMode != 0)
     {
-        PixelShaderOutput output;
-    
-    // テクスチャのサンプリング
-        float4 textureColor = gTexture.Sample(gSampler, input.texcoord);
-    
-    // ライティング計算の切り替え
-        if (gMaterial.enabledLighting != 0)
+        float NdotL = dot(normalize(input.normal), -gDirectionalLight.direction);
+        float cos = 0.0f;
+
+        // ライティングモードによる切り替え
+        if (gMaterial.lightingMode == 2) // "Half-Lambert"
         {
-        // HalfLambertライティング：影の境界を柔らかくする手法
-            float NdotL = dot(normalize(input.normal), -gDirectionalLight.direction);
-            float cos = pow(NdotL * 0.5f + 0.5f, 2.0f);
+            cos = pow(NdotL * 0.5f + 0.5f, 2.0f);
+        }
+        else // "Lambert" (mode == 1)
+        {
+            cos = max(0.0f, NdotL);
+        }
         
-            output.color = gMaterial.color * textureColor * gDirectionalLight.color * cos * gDirectionalLight.intensity;
-        }
-        else
-        {
-        // ライティング無効時はテクスチャカラーとマテリアルカラーのみ
-            output.color = gMaterial.color * textureColor;
-        }
-    
-        return output;
+        output.color = gMaterial.color * textureColor * gDirectionalLight.color * cos * gDirectionalLight.intensity;
     }
+    else
+    {
+        // ライティングなし、または明示的にNoneが選ばれている場合
+        output.color = gMaterial.color * textureColor;
+    }
+    
+    return output;
+}
