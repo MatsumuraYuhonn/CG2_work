@@ -4,8 +4,8 @@
 #include <vector>
 #include <string>
 #include "MTEngine/Engine/Math/Vector.h" 
+#include "MTEngine/Engine/Graphics/TextureManager.h"
 
-// 頂点データ構造
 namespace MTEngine {
 
     struct VertexData {
@@ -14,50 +14,45 @@ namespace MTEngine {
         Vector3 normal;
     };
 
-    // マテリアルデータ
     struct MaterialData {
         std::string textureFilePath;
     };
 
-    // モデルデータ全体
-    struct ModelData {
+    struct MeshData {
         std::vector<VertexData> vertices;
         MaterialData material;
     };
 
-}
+    struct ModelData {
+        std::vector<MeshData> meshes;
+    };
 
-
-// 3Dモデルリソースの管理と描画を行うクラス
-namespace MTEngine {
+    // 前方宣言 (TextureManagerの実装に合わせて適宜調整してください)
+    class TextureManager;
 
     class Model {
     public:
-        // OBJファイルの読み込み
         static ModelData LoadObjFile(const std::string& directoryPath, const std::string& filename);
 
         Model();
         ~Model();
 
-        // 頂点バッファの初期化
         bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, const ModelData& modelData);
+        void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, TextureManager* textureManager);
 
-        // 描画実行
-        void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
+        struct MeshResource {
+            Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;
+            D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+            std::string textureFilePath;
+            UINT vertexCount; // 頂点数を保持
+        };
 
-        // テクスチャパスの取得
-        const std::string& GetTextureFilePath() const { return modelData_.material.textureFilePath; }
+        std::vector<MeshResource> meshResources_;
 
     private:
-        // マテリアルファイルの読み込み
         static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
-
-        // バッファリソースの生成
         Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t sizeInBytes);
 
         ModelData modelData_;
-        Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_ = nullptr;
-        D3D12_VERTEX_BUFFER_VIEW vertexBufferView_{};
     };
-
 }
