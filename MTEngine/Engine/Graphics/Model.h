@@ -3,6 +3,7 @@
 #include <wrl.h>
 #include <vector>
 #include <string>
+#include <unordered_map>
 #include "MTEngine/Engine/Math/Vector.h" 
 #include "MTEngine/Engine/Graphics/TextureManager.h"
 
@@ -50,7 +51,8 @@ namespace MTEngine {
         std::vector<MeshResource> meshResources_;
 
     private:
-        static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
+        // mtlファイル内の全マテリアルを name -> MaterialData で返す（マルチマテリアル対応）
+        static std::unordered_map<std::string, MaterialData> LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
         Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t sizeInBytes);
 
         ModelData modelData_;

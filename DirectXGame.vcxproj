@@ -128,6 +128,7 @@
     <ClInclude Include="MTEngine\Engine\Graphics\Renderer.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\Sprite.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\TextureManager.h" />
+    <ClInclude Include="MTEngine\Engine\Input\GamePad.h" />
     <ClInclude Include="MTEngine\Engine\Input\Input.h" />
     <ClInclude Include="MTEngine\Engine\Math\Matrix.h" />
     <ClInclude Include="MTEngine\Engine\Math\Transform.h" />
@@ -162,6 +163,7 @@
     <ClCompile Include="MTEngine\Engine\Graphics\Renderer.cpp" />
     <ClCompile Include="MTEngine\Engine\Graphics\Sprite.cpp" />
     <ClCompile Include="MTEngine\Engine\Graphics\TextureManager.cpp" />
+    <ClCompile Include="MTEngine\Engine\Input\GamePad.cpp" />
     <ClCompile Include="MTEngine\Engine\Input\Input.cpp" />
     <ClCompile Include="MTEngine\Engine\Math\Vector.cpp" />
     <ClCompile Include="MTEngine\Game\Scene\GameScene.cpp" />

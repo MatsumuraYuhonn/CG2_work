@@ -20,9 +20,10 @@
 //ゲームシーンを管理するクラス
 namespace MTEngine {
 
-    enum class DrawMode {
-        Default,
+    enum class DebugMode {
+        Sprite_Axis_Sphere,
         MultiMesh,
+        MultiMaterial,
         Sound
     };
 
@@ -81,6 +82,15 @@ namespace MTEngine {
         Transform multiMeshTransform_{ {1.0f,1.0f,1.0f}, {0.0f,3.0f,0.0f}, {0.0f,-1.0f,5.0f} };
 
 
+        // マルチマテリアルモデル（1つのモデルに複数のマテリアル/テクスチャを持つ）
+        std::unique_ptr<Model> multiMaterialModel_;
+        //マルチマテリアルモデルのモデルデータ
+        ModelData multiMaterialModelData_;
+        //マルチマテリアル用の行列変換定数バッファ
+        TransformationMatrixConstantBuffer multiMaterialWvpResource_;
+        //マルチマテリアルモデルのトランスフォーム情報
+        Transform multiMaterialTransform_{ {1.0f,1.0f,1.0f}, {0.0f,3.0f,0.0f}, {0.0f,0.0f,0.0f} };
+
         //axis.obj用テクスチャのGPUデスクリプタハンドル
         D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU_{};
         //球体(uvChecker)用テクスチャのGPUデスクリプタハンドル
@@ -103,7 +113,7 @@ namespace MTEngine {
         bool useMonsterBall_ = false;
 
 
-        DrawMode currentDrawMode_ = DrawMode::Default;
+        DebugMode currentDrawMode_ = DebugMode::Sprite_Axis_Sphere;
 
         bool isSoundPlay = false;
 

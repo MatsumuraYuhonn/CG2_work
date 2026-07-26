@@ -135,6 +135,9 @@
     <ClInclude Include="MTEngine\Engine\Graphics\Renderer.h">
       <Filter>Engine\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="MTEngine\Engine\Input\GamePad.h">
+      <Filter>Engine\Input</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MTEngine\Engine\Audio\Sound.cpp">
@@ -229,6 +232,9 @@
     </ClCompile>
     <ClCompile Include="MTEngine\Engine\Graphics\Renderer.cpp">
       <Filter>Engine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Input\GamePad.cpp">
+      <Filter>Engine\Input</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

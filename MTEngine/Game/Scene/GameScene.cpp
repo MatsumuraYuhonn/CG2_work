@@ -29,6 +29,7 @@ namespace MTEngine {
 		wvpResource_.Initialize(device);
 		sphereWvpResource_.Initialize(device);
 		multiMeshWvpResource_.Initialize(device);
+		multiMaterialWvpResource_.Initialize(device);
 
 		textureManager_.Initialize(device, srvHeapManager);
 
@@ -47,6 +48,20 @@ namespace MTEngine {
 		multiMeshTextureSrvHandleGPU_ = textureManager_.GetGPUDescriptorHandle(
 			multiMeshModelData_.meshes[0].material.textureFilePath);
 
+		// --- マルチマテリアルモデルの読み込み ---
+		// multiMaterial.obj は usemtl で複数マテリアルに分かれており、
+		// Model::LoadObjFile が material ごとにメッシュを分割して読み込む。
+		multiMaterialModelData_ = Model::LoadObjFile("MTEngine/Game/Resources", "multiMaterial.obj");
+		multiMaterialModel_ = std::make_unique<Model>();
+		multiMaterialModel_->Initialize(device, multiMaterialModelData_);
+
+		// メッシュごとに異なるテクスチャを持つため、全メッシュ分のテクスチャを読み込んでおく。
+		// （1つだけロードすると他のメッシュのテクスチャが正しく描画されない）
+		for (const auto& mesh : multiMaterialModelData_.meshes) {
+			if (!mesh.material.textureFilePath.empty()) {
+				textureManager_.Load(mesh.material.textureFilePath, commandList);
+			}
+		}
 
 		// 球体モデルの生成
 		sphereModelData_.meshes.emplace_back();
@@ -118,21 +133,25 @@ namespace MTEngine {
 		multiMeshWvpResource_->WVP = Multiply(multiMeshWorldMatrix, viewProjectionMatrix);
 		multiMeshWvpResource_->World = multiMeshWorldMatrix;
 
+		// マルチマテリアルモデルのワールド行列
+		Matrix4x4 multiMaterialWorldMatrix = MakeAffineMatrix(multiMaterialTransform_.scale, multiMaterialTransform_.rotate, multiMaterialTransform_.translate);
+		multiMaterialWvpResource_->WVP = Multiply(multiMaterialWorldMatrix, viewProjectionMatrix);
+		multiMaterialWvpResource_->World = multiMaterialWorldMatrix;
+
 
 #ifdef USE_IMGUI
 		ImGui::Begin("Debug Settings");
 
 		if (ImGui::CollapsingHeader("Scene Settings")) {
-			const char* modeNames[] = { "Default", "MultiMesh", "Sound" };
+			const char* modeNames[] = { "Sprite_Axis_Sphere", "MultiMesh", "MultiMaterial", "Sound" };
 			int currentMode = static_cast<int>(currentDrawMode_);
 
 			if (ImGui::Combo("Draw Mode", &currentMode, modeNames, IM_ARRAYSIZE(modeNames))) {
-				currentDrawMode_ = static_cast<DrawMode>(currentMode);
+				currentDrawMode_ = static_cast<DebugMode>(currentMode);
 			}
 		}
 
-		switch (currentDrawMode_) {
-		case DrawMode::Default:
+		if (currentDrawMode_ != DebugMode::Sound) {
 
 			// ライト設定
 			if (ImGui::CollapsingHeader("Light Settings")) {
@@ -163,17 +182,23 @@ namespace MTEngine {
 
 			}
 
+		}
+
+		if (ImGui::CollapsingHeader("UV Transform")) {
+			ImGui::DragFloat3("UVTranslate", &sprite_->uvTransform.translate.x, 0.01f, -10.0f, 10.0f);
+			ImGui::DragFloat3("UVScale", &sprite_->uvTransform.scale.x, 0.01f, -10.0f, 10.0f);
+			ImGui::SliderAngle("UVRotate", &sprite_->uvTransform.rotate.z, -360.0f, 360.0f);
+		}
+
+		switch (currentDrawMode_) {
+		case DebugMode::Sprite_Axis_Sphere:
+
+
 			// スプライト設定
 			if (ImGui::CollapsingHeader("Sprite Transform")) {
 				ImGui::DragFloat3("Sprite Position", &sprite_->transform.translate.x, 1.0f);
 				ImGui::DragFloat3("Sprite Rotation", &sprite_->transform.rotate.x, 0.01f);
 				ImGui::DragFloat3("Sprite Scale", &sprite_->transform.scale.x, 0.01f);
-			}
-
-			if (ImGui::CollapsingHeader("UV Transform")) {
-				ImGui::DragFloat3("UVTranslate", &sprite_->uvTransform.translate.x, 0.01f, -10.0f, 10.0f);
-				ImGui::DragFloat3("UVScale", &sprite_->uvTransform.scale.x, 0.01f, -10.0f, 10.0f);
-				ImGui::SliderAngle("UVRotate", &sprite_->uvTransform.rotate.z, -360.0f, 360.0f);
 			}
 
 
@@ -192,36 +217,7 @@ namespace MTEngine {
 			}
 
 			break;
-		case DrawMode::MultiMesh:
-
-			// ライト設定
-			if (ImGui::CollapsingHeader("Light Settings")) {
-
-				const char* lightingModes[] = { "None", "Lambert", "Half-Lambert" };
-				int currentMode = static_cast<int>(materialResourceSprite_->lightingMode);
-
-				if (ImGui::Combo("Lighting Mode", &currentMode, lightingModes, IM_ARRAYSIZE(lightingModes))) {
-					materialResourceSprite_->lightingMode = static_cast<float>(currentMode);
-				}
-
-				ImGui::Separator();
-
-				ImGui::ColorEdit4("Light Color", &directionalLightResource_->color.x);
-
-				if (ImGui::DragFloat3("Light Direction", &directionalLightResource_->direction.x, 0.01f, -1.0f, 1.0f)) {
-					float length = std::sqrt(directionalLightResource_->direction.x * directionalLightResource_->direction.x +
-						directionalLightResource_->direction.y * directionalLightResource_->direction.y +
-						directionalLightResource_->direction.z * directionalLightResource_->direction.z);
-					if (length != 0) {
-						directionalLightResource_->direction.x /= length;
-						directionalLightResource_->direction.y /= length;
-						directionalLightResource_->direction.z /= length;
-					}
-				}
-
-				ImGui::DragFloat("Intensity", &directionalLightResource_->intensity, 0.01f, 0.0f, 10.0f);
-
-			}
+		case DebugMode::MultiMesh:
 
 			if (ImGui::CollapsingHeader("MultiMesh Transform")) {
 				ImGui::DragFloat3("MultiMesh Scale", &multiMeshTransform_.scale.x, 0.01f);
@@ -231,7 +227,18 @@ namespace MTEngine {
 
 			break;
 
-		case DrawMode::Sound:
+		case DebugMode::MultiMaterial:
+
+			if (ImGui::CollapsingHeader("MultiMaterial Transform")) {
+				ImGui::DragFloat3("MultiMaterial Scale", &multiMaterialTransform_.scale.x, 0.01f);
+				ImGui::DragFloat3("MultiMaterial Rotate", &multiMaterialTransform_.rotate.x, 0.01f);
+				ImGui::DragFloat3("MultiMaterial Translate", &multiMaterialTransform_.translate.x, 0.1f);
+			}
+
+			break;
+
+		case DebugMode::Sound:
+
 			// サウンド設定
 			if (ImGui::CollapsingHeader("Sound Settings")) {
 
@@ -246,7 +253,6 @@ namespace MTEngine {
 
 		}
 
-
 		//ImGui::Checkbox("Debug Camera", &isDebugCameraActive_);
 		ImGui::End();
 #endif
@@ -259,7 +265,8 @@ namespace MTEngine {
 
 		// モードによる描画の切り替え
 		switch (currentDrawMode_) {
-		case DrawMode::Default:
+		case DebugMode::Sprite_Axis_Sphere:
+
 			// axis.obj
 			commandList->SetGraphicsRootConstantBufferView(1, wvpResource_.GetGPUVirtualAddress());
 			commandList->SetGraphicsRootDescriptorTable(3, textureSrvHandleGPU_);
@@ -275,12 +282,20 @@ namespace MTEngine {
 
 			break;
 
-		case DrawMode::MultiMesh:
+		case DebugMode::MultiMesh:
 
 			// --- multiMesh.objの描画 ---
 			commandList->SetGraphicsRootConstantBufferView(1, multiMeshWvpResource_.GetGPUVirtualAddress());
 			commandList->SetGraphicsRootDescriptorTable(3, multiMeshTextureSrvHandleGPU_);
 			multiMeshModel_->Draw(commandList, &textureManager_);
+
+			break;
+
+		case DebugMode::MultiMaterial:
+
+			// --- マルチマテリアルモデルの描画 ---
+			commandList->SetGraphicsRootConstantBufferView(1, multiMaterialWvpResource_.GetGPUVirtualAddress());
+			multiMaterialModel_->Draw(commandList, &textureManager_);
 
 			break;
 		}
