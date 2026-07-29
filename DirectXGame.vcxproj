@@ -15,6 +15,7 @@
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>DirectXGame</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -41,14 +42,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(ProjectDir)bin\Debug\</OutDir>
+    <OutDir>.\x64\Debug</OutDir>
     <IntDir>$(ProjectDir)bin-int\Debug\</IntDir>
     <TargetName>DirectXGame</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(ProjectDir)bin\Release\</OutDir>
+    <OutDir>.\x64\Release</OutDir>
     <IntDir>$(ProjectDir)bin-int\Release\</IntDir>
     <TargetName>DirectXGame</TargetName>
     <TargetExt>.exe</TargetExt>
@@ -57,7 +58,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>DEBUG;USE_IMGUI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;USE_IMGUI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>.;MTEngine\Engine;MTEngine\Game;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -128,6 +129,7 @@
     <ClInclude Include="MTEngine\Engine\Graphics\Renderer.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\Sprite.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\TextureManager.h" />
+    <ClInclude Include="MTEngine\Engine\Input\GamePad.h" />
     <ClInclude Include="MTEngine\Engine\Input\Input.h" />
     <ClInclude Include="MTEngine\Engine\Math\Matrix.h" />
     <ClInclude Include="MTEngine\Engine\Math\Transform.h" />
@@ -162,6 +164,7 @@
     <ClCompile Include="MTEngine\Engine\Graphics\Renderer.cpp" />
     <ClCompile Include="MTEngine\Engine\Graphics\Sprite.cpp" />
     <ClCompile Include="MTEngine\Engine\Graphics\TextureManager.cpp" />
+    <ClCompile Include="MTEngine\Engine\Input\GamePad.cpp" />
     <ClCompile Include="MTEngine\Engine\Input\Input.cpp" />
     <ClCompile Include="MTEngine\Engine\Math\Vector.cpp" />
     <ClCompile Include="MTEngine\Game\Scene\GameScene.cpp" />
@@ -173,20 +176,20 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="MTEngine\Engine\Shaders\Object3d.hlsli" />
+    <Text Include="externals\imgui\LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="MTEngine\Engine\Shaders\Object3d.PS.hlsl">
+    <None Include="MTEngine\Assets\Shaders\Object3d.hlsli" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="MTEngine\Assets\Shaders\Object3d.PS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
     </FxCompile>
-    <FxCompile Include="MTEngine\Engine\Shaders\object3d.VS.hlsl">
+    <FxCompile Include="MTEngine\Assets\Shaders\object3d.VS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
     </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="externals\imgui\LICENSE.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

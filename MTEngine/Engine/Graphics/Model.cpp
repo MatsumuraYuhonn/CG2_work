@@ -7,7 +7,6 @@ namespace MTEngine {
 
     ModelData Model::LoadObjFile(const std::string& directoryPath, const std::string& filename) {
         ModelData modelData;
-        modelData.meshes.emplace_back(); // 初期メッシュ作成
 
         std::vector<Vector4> positions;
         std::vector<Vector3> normals;
@@ -16,6 +15,27 @@ namespace MTEngine {
 
         std::ifstream file(directoryPath + "/" + filename);
         assert(file.is_open());
+
+        // mtlファイルに定義されている全マテリアル（name -> MaterialData）
+        std::unordered_map<std::string, MaterialData> materials;
+        // マテリアル名 -> modelData.meshes内のインデックス（同じマテリアルの面は同じメッシュにまとめる）
+        std::unordered_map<std::string, size_t> materialToMeshIndex;
+        std::string currentMaterialName; // "" = マテリアル未指定
+
+        auto GetOrCreateMesh = [&](const std::string& materialName) -> MeshData& {
+            auto it = materialToMeshIndex.find(materialName);
+            if (it != materialToMeshIndex.end()) {
+                return modelData.meshes[it->second];
+            }
+            modelData.meshes.emplace_back();
+            size_t index = modelData.meshes.size() - 1;
+            materialToMeshIndex[materialName] = index;
+            auto matIt = materials.find(materialName);
+            if (matIt != materials.end()) {
+                modelData.meshes[index].material = matIt->second;
+            }
+            return modelData.meshes[index];
+            };
 
         while (std::getline(file, line)) {
             std::string identifier;
@@ -29,20 +49,30 @@ namespace MTEngine {
                 position.w = 1.0f;
                 positions.push_back(position);
 
-            } else if (identifier == "vt") {
+            }
+            else if (identifier == "vt") {
 
                 Vector2 texcoord;
                 s >> texcoord.x >> texcoord.y;
                 texcoord.y = 1.0f - texcoord.y;
                 texcoords.push_back(texcoord);
 
-            }else if (identifier == "vn") {
+            }
+            else if (identifier == "vn") {
 
                 Vector3 normal;
                 s >> normal.x >> normal.y >> normal.z;
                 normals.push_back(normal);
 
-            }else if (identifier == "f") {
+            }
+            else if (identifier == "usemtl") {
+
+                s >> currentMaterialName;
+                // マテリアル切り替え時点でメッシュを確保しておく
+                GetOrCreateMesh(currentMaterialName);
+
+            }
+            else if (identifier == "f") {
 
                 VertexData triangle[3];
                 for (int32_t faceVertex = 0; faceVertex < 3; ++faceVertex) {
@@ -62,41 +92,64 @@ namespace MTEngine {
                     normal.x *= -1.0f;
                     triangle[faceVertex] = { position, texcoord, normal };
                 }
-                // 反転させず、読み込んだ順のまま格納
-                modelData.meshes.back().vertices.push_back(triangle[2]);
-                modelData.meshes.back().vertices.push_back(triangle[1]);
-                modelData.meshes.back().vertices.push_back(triangle[0]);
+                // 現在のマテリアルに対応するメッシュへ、読み込んだ順のまま格納
+                MeshData& mesh = GetOrCreateMesh(currentMaterialName);
+                mesh.vertices.push_back(triangle[2]);
+                mesh.vertices.push_back(triangle[1]);
+                mesh.vertices.push_back(triangle[0]);
 
-            } else if (identifier == "mtllib") {
+            }
+            else if (identifier == "mtllib") {
                 std::string materialFilename;
 
                 s >> materialFilename;
-                modelData.meshes.back().material = Model::LoadMaterialTemplateFile(directoryPath, materialFilename);
+                materials = Model::LoadMaterialTemplateFile(directoryPath, materialFilename);
+
+                // 既に生成済みのメッシュがあれば、対応するマテリアルを反映する
+                for (auto& [name, index] : materialToMeshIndex) {
+                    auto matIt = materials.find(name);
+                    if (matIt != materials.end()) {
+                        modelData.meshes[index].material = matIt->second;
+                    }
+                }
             }
         }
+
+        // usemtl/mtllibが一度も無いobjへの後方互換（空メッシュを1つ用意）
+        if (modelData.meshes.empty()) {
+            modelData.meshes.emplace_back();
+        }
+
         return modelData;
     }
 
     Model::Model() {}
     Model::~Model() {}
 
-    MaterialData Model::LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename) {
-        MaterialData materialData;
+    std::unordered_map<std::string, MaterialData> Model::LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename) {
+        std::unordered_map<std::string, MaterialData> materials;
         std::string line;
         std::ifstream file(directoryPath + "/" + filename);
-        if (!file.is_open()) return materialData;
+        if (!file.is_open()) return materials;
 
+        std::string currentName;
         while (std::getline(file, line)) {
             std::string identifier;
             std::istringstream s(line);
             s >> identifier;
-            if (identifier == "map_Kd") {
+            if (identifier == "newmtl") {
+                s >> currentName;
+                materials[currentName] = MaterialData{};
+            }
+            else if (identifier == "map_Kd") {
                 std::string textureFilename;
                 s >> textureFilename;
-                materialData.textureFilePath = directoryPath + "/" + textureFilename;
+                if (!currentName.empty()) {
+                    materials[currentName].textureFilePath = directoryPath + "/" + textureFilename;
+                }
             }
         }
-        return materialData;
+        return materials;
     }
 
     bool Model::Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, const ModelData& modelData) {

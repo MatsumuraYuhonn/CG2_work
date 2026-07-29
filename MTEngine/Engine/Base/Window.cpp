@@ -44,7 +44,7 @@ namespace MTEngine {
 		// ウィンドウの生成
 		HWND hwnd = CreateWindow(
 			wc.lpszClassName,
-			L"CG2",
+			L"LE2A_25_マツムラ_ユホン",
 			WS_OVERLAPPEDWINDOW,
 			CW_USEDEFAULT,
 			CW_USEDEFAULT,

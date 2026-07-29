@@ -100,10 +100,10 @@ namespace MTEngine {
 
 
         // 3. シェーダーのコンパイル (引数の shaderCompiler を使用)
-        Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = shaderCompiler->Compile(L"MTEngine/Engine/Shaders/object3d.VS.hlsl", L"vs_6_0");
+        Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = shaderCompiler->Compile(L"MTEngine/Assets/Shaders/object3d.VS.hlsl", L"vs_6_0");
         assert(vertexShaderBlob != nullptr);
 
-        Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = shaderCompiler->Compile(L"MTEngine/Engine/Shaders/object3d.PS.hlsl", L"ps_6_0");
+        Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = shaderCompiler->Compile(L"MTEngine/Assets/Shaders/object3d.PS.hlsl", L"ps_6_0");
         assert(pixelShaderBlob != nullptr);
 
 

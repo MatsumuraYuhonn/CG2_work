@@ -30,6 +30,10 @@ namespace MTEngine {
         // 初回クリア
         std::fill(std::begin(key_), std::end(key_), 0);
         std::fill(std::begin(preKey_), std::end(preKey_), 0);
+
+        // ゲームパッド（XInput）の初期化
+        gamePad_ = std::make_unique<GamePad>();
+        gamePad_->Initialize();
     }
 
     void Input::Update() {
@@ -43,6 +47,11 @@ namespace MTEngine {
                 keyboard_->Acquire();
                 std::memset(key_, 0, sizeof(key_));
             }
+        }
+
+        // ゲームパッドの入力状態を更新
+        if (gamePad_) {
+            gamePad_->Update();
         }
     }
 
