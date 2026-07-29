@@ -83,6 +83,7 @@ namespace MTEngine {
 			}
 		}
 
+
 		// 球体モデルの生成
 		sphereModelData_.meshes.emplace_back();
 		sphereModelData_.meshes.back().vertices = MakeSphere(16);
