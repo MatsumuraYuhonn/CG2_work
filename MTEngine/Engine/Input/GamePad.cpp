@@ -13,111 +13,91 @@ namespace MTEngine {
     }
 
     void GamePad::Initialize() {
-        // 接続状態を初期チェックしておく
-        for (int i = 0; i < kMaxControllers; ++i) {
-            XINPUT_STATE state{};
-            DWORD result = XInputGetState(i, &state);
-            states_[i].isConnected = (result == ERROR_SUCCESS);
-        }
+        // 接続状態を初期チェックしておく（コントローラー0番のみ）
+        XINPUT_STATE state{};
+        DWORD result = XInputGetState(0, &state);
+        state_.isConnected = (result == ERROR_SUCCESS);
     }
 
     void GamePad::Update() {
-        for (int i = 0; i < kMaxControllers; ++i) {
-            auto& s = states_[i];
+        // 前フレームのボタン状態を保存
+        state_.preButtons = state_.buttons;
 
-            // 前フレームのボタン状態を保存
-            s.preButtons = s.buttons;
+        XINPUT_STATE xstate{};
+        DWORD result = XInputGetState(0, &xstate);
 
-            XINPUT_STATE xstate{};
-            DWORD result = XInputGetState(i, &xstate);
-
-            if (result != ERROR_SUCCESS) {
-                // 未接続、または切断された場合は状態をクリア
-                s.isConnected = false;
-                s.buttons = 0;
-                s.leftStick = {};
-                s.rightStick = {};
-                s.leftTrigger = 0.0f;
-                s.rightTrigger = 0.0f;
-                continue;
-            }
-
-            s.isConnected = true;
-
-            const XINPUT_GAMEPAD& pad = xstate.Gamepad;
-            s.buttons = pad.wButtons;
-
-            s.leftStick.x = NormalizeStickAxis(pad.sThumbLX, kLeftStickDeadZone);
-            s.leftStick.y = NormalizeStickAxis(pad.sThumbLY, kLeftStickDeadZone);
-            s.rightStick.x = NormalizeStickAxis(pad.sThumbRX, kRightStickDeadZone);
-            s.rightStick.y = NormalizeStickAxis(pad.sThumbRY, kRightStickDeadZone);
-
-            s.leftTrigger = NormalizeTrigger(pad.bLeftTrigger, kTriggerDeadZone);
-            s.rightTrigger = NormalizeTrigger(pad.bRightTrigger, kTriggerDeadZone);
+        if (result != ERROR_SUCCESS) {
+            // 未接続、または切断された場合は状態をクリア
+            state_.isConnected = false;
+            state_.buttons = 0;
+            state_.leftStick = {};
+            state_.rightStick = {};
+            state_.leftTrigger = 0.0f;
+            state_.rightTrigger = 0.0f;
+            return;
         }
+
+        state_.isConnected = true;
+
+        const XINPUT_GAMEPAD& pad = xstate.Gamepad;
+        state_.buttons = pad.wButtons;
+
+        state_.leftStick.x = NormalizeStickAxis(pad.sThumbLX, kLeftStickDeadZone);
+        state_.leftStick.y = NormalizeStickAxis(pad.sThumbLY, kLeftStickDeadZone);
+        state_.rightStick.x = NormalizeStickAxis(pad.sThumbRX, kRightStickDeadZone);
+        state_.rightStick.y = NormalizeStickAxis(pad.sThumbRY, kRightStickDeadZone);
+
+        state_.leftTrigger = NormalizeTrigger(pad.bLeftTrigger, kTriggerDeadZone);
+        state_.rightTrigger = NormalizeTrigger(pad.bRightTrigger, kTriggerDeadZone);
     }
 
-    bool GamePad::IsConnected(int index) const {
-        if (index < 0 || index >= kMaxControllers) return false;
-        return states_[index].isConnected;
+    bool GamePad::IsConnected(int /*index*/) const {
+        return state_.isConnected;
     }
 
-    bool GamePad::PushButton(GamePadButton button, int index) const {
-        if (index < 0 || index >= kMaxControllers) return false;
+    bool GamePad::PushButton(GamePadButton button, int /*index*/) const {
         WORD mask = static_cast<WORD>(button);
-        return (states_[index].buttons & mask) != 0;
+        return (state_.buttons & mask) != 0;
     }
 
-    bool GamePad::TriggerButton(GamePadButton button, int index) const {
-        if (index < 0 || index >= kMaxControllers) return false;
+    bool GamePad::TriggerButton(GamePadButton button, int /*index*/) const {
         WORD mask = static_cast<WORD>(button);
-        const auto& s = states_[index];
-        return (s.buttons & mask) && !(s.preButtons & mask);
+        return (state_.buttons & mask) && !(state_.preButtons & mask);
     }
 
-    bool GamePad::ExitButton(GamePadButton button, int index) const {
-        if (index < 0 || index >= kMaxControllers) return false;
+    bool GamePad::ExitButton(GamePadButton button, int /*index*/) const {
         WORD mask = static_cast<WORD>(button);
-        const auto& s = states_[index];
-        return !(s.buttons & mask) && (s.preButtons & mask);
+        return !(state_.buttons & mask) && (state_.preButtons & mask);
     }
 
-    const StickState& GamePad::GetLeftStick(int index) const {
-        static StickState empty{};
-        if (index < 0 || index >= kMaxControllers) return empty;
-        return states_[index].leftStick;
+    const StickState& GamePad::GetLeftStick(int /*index*/) const {
+        return state_.leftStick;
     }
 
-    const StickState& GamePad::GetRightStick(int index) const {
-        static StickState empty{};
-        if (index < 0 || index >= kMaxControllers) return empty;
-        return states_[index].rightStick;
+    const StickState& GamePad::GetRightStick(int /*index*/) const {
+        return state_.rightStick;
     }
 
-    float GamePad::GetLeftTrigger(int index) const {
-        if (index < 0 || index >= kMaxControllers) return 0.0f;
-        return states_[index].leftTrigger;
+    float GamePad::GetLeftTrigger(int /*index*/) const {
+        return state_.leftTrigger;
     }
 
-    float GamePad::GetRightTrigger(int index) const {
-        if (index < 0 || index >= kMaxControllers) return 0.0f;
-        return states_[index].rightTrigger;
+    float GamePad::GetRightTrigger(int /*index*/) const {
+        return state_.rightTrigger;
     }
 
-    void GamePad::SetVibration(float leftMotor, float rightMotor, int index) {
-        if (index < 0 || index >= kMaxControllers) return;
-
+    void GamePad::SetVibration(float leftMotor, float rightMotor, int /*index*/) {
         leftMotor = std::clamp(leftMotor, 0.0f, 1.0f);
         rightMotor = std::clamp(rightMotor, 0.0f, 1.0f);
 
         XINPUT_VIBRATION vibration{};
         vibration.wLeftMotorSpeed = static_cast<WORD>(leftMotor * 65535.0f);
         vibration.wRightMotorSpeed = static_cast<WORD>(rightMotor * 65535.0f);
-        XInputSetState(index, &vibration);
+        XInputSetState(0, &vibration);
     }
 
-    void GamePad::StopVibration(int index) {
-        SetVibration(0.0f, 0.0f, index);
+    void GamePad::StopVibration(int /*index*/) {
+        SetVibration(0.0f, 0.0f, 0);
     }
 
     float GamePad::NormalizeStickAxis(SHORT value, SHORT deadZone) {

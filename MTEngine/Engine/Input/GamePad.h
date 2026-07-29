@@ -2,11 +2,10 @@
 #include <windows.h>
 #include <Xinput.h>
 #include <cstdint>
-#include <array>
 
 #pragma comment(lib, "xinput.lib")
 
-// ゲームパッド入力管理クラス（XInput使用、最大4台対応）
+// ゲームパッド入力管理クラス（XInput使用、1台のみ対応）
 namespace MTEngine {
 
     // ゲームパッドのボタン種別（XINPUT_GAMEPADのビットマスクに対応）
@@ -46,8 +45,6 @@ namespace MTEngine {
 
     class GamePad {
     public:
-        static const int kMaxControllers = 4; // XInputは最大4台まで
-
         GamePad() = default;
         ~GamePad() = default;
 
@@ -59,7 +56,7 @@ namespace MTEngine {
         // ゲームパッド入力状態の更新
         void Update();
 
-        // 指定したコントローラーが接続されているか
+        // コントローラーが接続されているか
         bool IsConnected(int index = 0) const;
 
         // ボタンが押されているか
@@ -88,7 +85,7 @@ namespace MTEngine {
         static float NormalizeStickAxis(SHORT value, SHORT deadZone);
         static float NormalizeTrigger(BYTE value, BYTE deadZone);
 
-        std::array<GamePadState, kMaxControllers> states_{};
+        GamePadState state_{};
     };
 
 }

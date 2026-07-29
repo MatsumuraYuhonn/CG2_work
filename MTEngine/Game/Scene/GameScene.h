@@ -24,7 +24,9 @@ namespace MTEngine {
         Sprite_Axis_Sphere,
         MultiMesh,
         MultiMaterial,
-        Sound
+        BunnyAndTeapot, // スタンフォードバニー＆ユタ・ティーポット
+        Sound,
+        GamePadInput   // コントローラー（GamePad）の入力状態をImGui上に表示するデバッグモード
     };
 
     class GameScene {
@@ -90,6 +92,18 @@ namespace MTEngine {
         TransformationMatrixConstantBuffer multiMaterialWvpResource_;
         //マルチマテリアルモデルのトランスフォーム情報
         Transform multiMaterialTransform_{ {1.0f,1.0f,1.0f}, {0.0f,3.0f,0.0f}, {0.0f,0.0f,0.0f} };
+
+        // --- スタンフォードバニー ---
+        std::unique_ptr<Model> bunnyModel_;
+        ModelData bunnyModelData_;
+        TransformationMatrixConstantBuffer bunnyWvpResource_;
+        Transform bunnyTransform_{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {-2.0f, 0.0f, 0.0f} };
+
+        // --- ユタ・ティーポット ---
+        std::unique_ptr<Model> teapotModel_;
+        ModelData teapotModelData_;
+        TransformationMatrixConstantBuffer teapotWvpResource_;
+        Transform teapotTransform_{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {2.0f, 0.0f, 0.0f} };
 
         //axis.obj用テクスチャのGPUデスクリプタハンドル
         D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU_{};

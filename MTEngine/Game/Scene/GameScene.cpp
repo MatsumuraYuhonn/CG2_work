@@ -1,6 +1,8 @@
 #include "GameScene.h"
 #include <cassert>
 #include <cmath>
+#include <string>
+#include <utility>
 
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
@@ -30,15 +32,17 @@ namespace MTEngine {
 		sphereWvpResource_.Initialize(device);
 		multiMeshWvpResource_.Initialize(device);
 		multiMaterialWvpResource_.Initialize(device);
+		bunnyWvpResource_.Initialize(device);
+		teapotWvpResource_.Initialize(device);
 
 		textureManager_.Initialize(device, srvHeapManager);
 
-		//　axis.objモデルの読み込み
+		// axis.objモデルの読み込み
 		modelData_ = Model::LoadObjFile("MTEngine/Game/Resources", "axis.obj");
 		model_ = std::make_unique<Model>();
 		model_->Initialize(device, modelData_);
 
-		//複数メッシュのモデル読み込み
+		// 複数メッシュのモデル読み込み
 		multiMeshModelData_ = Model::LoadObjFile("MTEngine/Game/Resources", "multiMesh.obj");
 		multiMeshModel_ = std::make_unique<Model>();
 		multiMeshModel_->Initialize(device, multiMeshModelData_);
@@ -49,15 +53,31 @@ namespace MTEngine {
 			multiMeshModelData_.meshes[0].material.textureFilePath);
 
 		// --- マルチマテリアルモデルの読み込み ---
-		// multiMaterial.obj は usemtl で複数マテリアルに分かれており、
-		// Model::LoadObjFile が material ごとにメッシュを分割して読み込む。
 		multiMaterialModelData_ = Model::LoadObjFile("MTEngine/Game/Resources", "multiMaterial.obj");
 		multiMaterialModel_ = std::make_unique<Model>();
 		multiMaterialModel_->Initialize(device, multiMaterialModelData_);
 
-		// メッシュごとに異なるテクスチャを持つため、全メッシュ分のテクスチャを読み込んでおく。
-		// （1つだけロードすると他のメッシュのテクスチャが正しく描画されない）
 		for (const auto& mesh : multiMaterialModelData_.meshes) {
+			if (!mesh.material.textureFilePath.empty()) {
+				textureManager_.Load(mesh.material.textureFilePath, commandList);
+			}
+		}
+
+		// --- スタンフォードバニーの読み込み ---
+		bunnyModelData_ = Model::LoadObjFile("MTEngine/Game/Resources", "bunny.obj");
+		bunnyModel_ = std::make_unique<Model>();
+		bunnyModel_->Initialize(device, bunnyModelData_);
+		for (const auto& mesh : bunnyModelData_.meshes) {
+			if (!mesh.material.textureFilePath.empty()) {
+				textureManager_.Load(mesh.material.textureFilePath, commandList);
+			}
+		}
+
+		// --- ユタ・ティーポットの読み込み ---
+		teapotModelData_ = Model::LoadObjFile("MTEngine/Game/Resources", "teapot.obj");
+		teapotModel_ = std::make_unique<Model>();
+		teapotModel_->Initialize(device, teapotModelData_);
+		for (const auto& mesh : teapotModelData_.meshes) {
 			if (!mesh.material.textureFilePath.empty()) {
 				textureManager_.Load(mesh.material.textureFilePath, commandList);
 			}
@@ -138,12 +158,22 @@ namespace MTEngine {
 		multiMaterialWvpResource_->WVP = Multiply(multiMaterialWorldMatrix, viewProjectionMatrix);
 		multiMaterialWvpResource_->World = multiMaterialWorldMatrix;
 
+		// バニーのワールド行列
+		Matrix4x4 bunnyWorldMatrix = MakeAffineMatrix(bunnyTransform_.scale, bunnyTransform_.rotate, bunnyTransform_.translate);
+		bunnyWvpResource_->WVP = Multiply(bunnyWorldMatrix, viewProjectionMatrix);
+		bunnyWvpResource_->World = bunnyWorldMatrix;
+
+		// ティーポットのワールド行列
+		Matrix4x4 teapotWorldMatrix = MakeAffineMatrix(teapotTransform_.scale, teapotTransform_.rotate, teapotTransform_.translate);
+		teapotWvpResource_->WVP = Multiply(teapotWorldMatrix, viewProjectionMatrix);
+		teapotWvpResource_->World = teapotWorldMatrix;
+
 
 #ifdef USE_IMGUI
 		ImGui::Begin("Debug Settings");
 
 		if (ImGui::CollapsingHeader("Scene Settings")) {
-			const char* modeNames[] = { "Sprite_Axis_Sphere", "MultiMesh", "MultiMaterial", "Sound" };
+			const char* modeNames[] = { "Sprite_Axis_Sphere", "MultiMesh", "MultiMaterial", "BunnyAndTeapot", "Sound", "GamePadInput" };
 			int currentMode = static_cast<int>(currentDrawMode_);
 
 			if (ImGui::Combo("Draw Mode", &currentMode, modeNames, IM_ARRAYSIZE(modeNames))) {
@@ -151,7 +181,7 @@ namespace MTEngine {
 			}
 		}
 
-		if (currentDrawMode_ != DebugMode::Sound) {
+		if (currentDrawMode_ != DebugMode::Sound && currentDrawMode_ != DebugMode::GamePadInput) {
 
 			// ライト設定
 			if (ImGui::CollapsingHeader("Light Settings")) {
@@ -182,12 +212,12 @@ namespace MTEngine {
 
 			}
 
-		}
+			if (ImGui::CollapsingHeader("UV Transform")) {
+				ImGui::DragFloat3("UVTranslate", &sprite_->uvTransform.translate.x, 0.01f, -10.0f, 10.0f);
+				ImGui::DragFloat3("UVScale", &sprite_->uvTransform.scale.x, 0.01f, -10.0f, 10.0f);
+				ImGui::SliderAngle("UVRotate", &sprite_->uvTransform.rotate.z, -360.0f, 360.0f);
+			}
 
-		if (ImGui::CollapsingHeader("UV Transform")) {
-			ImGui::DragFloat3("UVTranslate", &sprite_->uvTransform.translate.x, 0.01f, -10.0f, 10.0f);
-			ImGui::DragFloat3("UVScale", &sprite_->uvTransform.scale.x, 0.01f, -10.0f, 10.0f);
-			ImGui::SliderAngle("UVRotate", &sprite_->uvTransform.rotate.z, -360.0f, 360.0f);
 		}
 
 		switch (currentDrawMode_) {
@@ -237,6 +267,22 @@ namespace MTEngine {
 
 			break;
 
+		case DebugMode::BunnyAndTeapot:
+
+			if (ImGui::CollapsingHeader("Bunny Transform")) {
+				ImGui::DragFloat3("Bunny Scale", &bunnyTransform_.scale.x, 0.01f);
+				ImGui::DragFloat3("Bunny Rotate", &bunnyTransform_.rotate.x, 0.01f);
+				ImGui::DragFloat3("Bunny Translate", &bunnyTransform_.translate.x, 0.1f);
+			}
+
+			if (ImGui::CollapsingHeader("Teapot Transform")) {
+				ImGui::DragFloat3("Teapot Scale", &teapotTransform_.scale.x, 0.01f);
+				ImGui::DragFloat3("Teapot Rotate", &teapotTransform_.rotate.x, 0.01f);
+				ImGui::DragFloat3("Teapot Translate", &teapotTransform_.translate.x, 0.1f);
+			}
+
+			break;
+
 		case DebugMode::Sound:
 
 			// サウンド設定
@@ -249,6 +295,76 @@ namespace MTEngine {
 				}
 
 			}
+			break;
+
+		case DebugMode::GamePadInput:
+
+			// コントローラー（GamePad）入力デバッグ表示
+			if (ImGui::CollapsingHeader("GamePad Input Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+				const GamePad* gamePad = input->GetGamePad();
+
+				if (!gamePad) {
+					ImGui::TextDisabled("GamePad is not available.");
+					break;
+				}
+
+				// 表示対象のボタン一覧（GamePadButtonと表示名のペア）
+				static const std::pair<GamePadButton, const char*> kButtonList[] = {
+					{ GamePadButton::Up, "Up" },{ GamePadButton::Down, "Down" },
+					{ GamePadButton::Left, "Left" },{ GamePadButton::Right, "Right" },
+					{ GamePadButton::Start, "Start" },{ GamePadButton::Back, "Back" },
+					{ GamePadButton::LThumb, "LThumb" },{ GamePadButton::RThumb, "RThumb" },
+					{ GamePadButton::LShoulder, "LShoulder" },{ GamePadButton::RShoulder, "RShoulder" },
+					{ GamePadButton::A, "A" },{ GamePadButton::B, "B" },
+					{ GamePadButton::X, "X" },{ GamePadButton::Y, "Y" },
+				};
+
+				// 1台のみ接続する想定なので、コントローラー0番だけを表示
+				bool isConnected = gamePad->IsConnected();
+
+				if (isConnected) {
+
+					// 押されているボタン一覧
+					ImGui::Text("Pushed Buttons:");
+					ImGui::Indent();
+
+					std::string pushedButtons;
+					for (const auto& btn : kButtonList) {
+						if (gamePad->PushButton(btn.first)) {
+							if (!pushedButtons.empty()) {
+								pushedButtons += ", ";
+							}
+							pushedButtons += btn.second;
+						}
+					}
+
+					if (pushedButtons.empty()) {
+						ImGui::TextDisabled("(None)");
+					}
+					else {
+						ImGui::TextWrapped("%s", pushedButtons.c_str());
+					}
+
+					ImGui::Unindent();
+					ImGui::Separator();
+
+					// スティック・トリガーの値
+					const StickState& leftStick = gamePad->GetLeftStick();
+					const StickState& rightStick = gamePad->GetRightStick();
+					float leftTrigger = gamePad->GetLeftTrigger();
+					float rightTrigger = gamePad->GetRightTrigger();
+
+					ImGui::Text("Left Stick  : (%.3f, %.3f)", leftStick.x, leftStick.y);
+					ImGui::Text("Right Stick : (%.3f, %.3f)", rightStick.x, rightStick.y);
+					ImGui::Text("Left Trigger  : %.3f", leftTrigger);
+					ImGui::Text("Right Trigger : %.3f", rightTrigger);
+				}
+				else {
+					ImGui::TextDisabled("Controller is not connected.");
+				}
+			}
+
 			break;
 
 		}
@@ -296,6 +412,18 @@ namespace MTEngine {
 			// --- マルチマテリアルモデルの描画 ---
 			commandList->SetGraphicsRootConstantBufferView(1, multiMaterialWvpResource_.GetGPUVirtualAddress());
 			multiMaterialModel_->Draw(commandList, &textureManager_);
+
+			break;
+
+		case DebugMode::BunnyAndTeapot:
+
+			// --- バニーの描画 ---
+			commandList->SetGraphicsRootConstantBufferView(1, bunnyWvpResource_.GetGPUVirtualAddress());
+			bunnyModel_->Draw(commandList, &textureManager_);
+
+			// --- ティーポットの描画 ---
+			commandList->SetGraphicsRootConstantBufferView(1, teapotWvpResource_.GetGPUVirtualAddress());
+			teapotModel_->Draw(commandList, &textureManager_);
 
 			break;
 		}
