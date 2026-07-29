@@ -38,12 +38,12 @@ namespace MTEngine {
 		textureManager_.Initialize(device, srvHeapManager);
 
 		// axis.objモデルの読み込み
-		modelData_ = Model::LoadObjFile("MTEngine/Game/Resources", "axis.obj");
+		modelData_ = Model::LoadObjFile("MTEngine/Assets/Resources", "axis.obj");
 		model_ = std::make_unique<Model>();
 		model_->Initialize(device, modelData_);
 
 		// 複数メッシュのモデル読み込み
-		multiMeshModelData_ = Model::LoadObjFile("MTEngine/Game/Resources", "multiMesh.obj");
+		multiMeshModelData_ = Model::LoadObjFile("MTEngine/Assets/Resources", "multiMesh.obj");
 		multiMeshModel_ = std::make_unique<Model>();
 		multiMeshModel_->Initialize(device, multiMeshModelData_);
 		textureManager_.Load(multiMeshModelData_.meshes[0].material.textureFilePath, commandList);
@@ -53,7 +53,7 @@ namespace MTEngine {
 			multiMeshModelData_.meshes[0].material.textureFilePath);
 
 		// --- マルチマテリアルモデルの読み込み ---
-		multiMaterialModelData_ = Model::LoadObjFile("MTEngine/Game/Resources", "multiMaterial.obj");
+		multiMaterialModelData_ = Model::LoadObjFile("MTEngine/Assets/Resources", "multiMaterial.obj");
 		multiMaterialModel_ = std::make_unique<Model>();
 		multiMaterialModel_->Initialize(device, multiMaterialModelData_);
 
@@ -64,7 +64,7 @@ namespace MTEngine {
 		}
 
 		// --- スタンフォードバニーの読み込み ---
-		bunnyModelData_ = Model::LoadObjFile("MTEngine/Game/Resources", "bunny.obj");
+		bunnyModelData_ = Model::LoadObjFile("MTEngine/Assets/Resources", "bunny.obj");
 		bunnyModel_ = std::make_unique<Model>();
 		bunnyModel_->Initialize(device, bunnyModelData_);
 		for (const auto& mesh : bunnyModelData_.meshes) {
@@ -74,7 +74,7 @@ namespace MTEngine {
 		}
 
 		// --- ユタ・ティーポットの読み込み ---
-		teapotModelData_ = Model::LoadObjFile("MTEngine/Game/Resources", "teapot.obj");
+		teapotModelData_ = Model::LoadObjFile("MTEngine/Assets/Resources", "teapot.obj");
 		teapotModel_ = std::make_unique<Model>();
 		teapotModel_->Initialize(device, teapotModelData_);
 		for (const auto& mesh : teapotModelData_.meshes) {
@@ -86,23 +86,23 @@ namespace MTEngine {
 		// 球体モデルの生成
 		sphereModelData_.meshes.emplace_back();
 		sphereModelData_.meshes.back().vertices = MakeSphere(16);
-		sphereModelData_.meshes.back().material.textureFilePath = "MTEngine/Game/Resources/uvChecker.png";
+		sphereModelData_.meshes.back().material.textureFilePath = "MTEngine/Assets/Resources/uvChecker.png";
 		sphereModel_ = std::make_unique<Model>();
 		sphereModel_->Initialize(device, sphereModelData_);
 
 		// テクスチャマネージャとロード
-		textureManager_.Load("MTEngine/Game/Resources/uvChecker.png", commandList);
+		textureManager_.Load("MTEngine/Assets/Resources/uvChecker.png", commandList);
 		textureManager_.Load(modelData_.meshes[0].material.textureFilePath, commandList);
 
 		textureSrvHandleGPU_ = textureManager_.GetGPUDescriptorHandle(modelData_.meshes[0].material.textureFilePath);
-		sphereTextureSrvHandleGPU_ = textureManager_.GetGPUDescriptorHandle("MTEngine/Game/Resources/uvChecker.png");
+		sphereTextureSrvHandleGPU_ = textureManager_.GetGPUDescriptorHandle("MTEngine/Assets/Resources/uvChecker.png");
 
 		// スプライト初期化（スプライトもuvCheckerを使う）
 		sprite_ = std::make_unique<Sprite>();
 		sprite_->Initialize(device, 640, 360, sphereTextureSrvHandleGPU_);
 
 		// オーディオ読み込みと再生
-		soundData1_ = SoundLoadWave("MTEngine/Game/Resources/Alarm01.wav");
+		soundData1_ = SoundLoadWave("MTEngine/Assets/Resources/Alarm01.wav");
 
 		// カメラ初期化
 		debugCamera_.Initialize();

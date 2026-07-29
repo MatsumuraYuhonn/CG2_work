@@ -28,11 +28,14 @@
     <Filter Include="Game\Scene">
       <UniqueIdentifier>{DCF93CE2-C8B1-7E2F-31B9-578B1D901920}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Shaders">
-      <UniqueIdentifier>{f7d402e9-3822-40b1-b474-23fe6432d903}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ImGui">
       <UniqueIdentifier>{0d78af03-bf22-4011-a5a3-2913a55621f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets">
+      <UniqueIdentifier>{0059445d-7b2e-45b8-a4ec-fb8053a1073f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets\Shaders">
+      <UniqueIdentifier>{c4187777-6b00-4f50-8bea-0ebaf3908d59}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -238,21 +241,21 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="MTEngine\Engine\Shaders\Object3d.hlsli">
-      <Filter>Engine\Shaders</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="MTEngine\Engine\Shaders\Object3d.PS.hlsl">
-      <Filter>Engine\Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="MTEngine\Engine\Shaders\object3d.VS.hlsl">
-      <Filter>Engine\Shaders</Filter>
-    </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt">
       <Filter>ImGui</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="MTEngine\Assets\Shaders\Object3d.hlsli">
+      <Filter>Assets\Shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="MTEngine\Assets\Shaders\Object3d.PS.hlsl">
+      <Filter>Assets\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="MTEngine\Assets\Shaders\object3d.VS.hlsl">
+      <Filter>Assets\Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
