@@ -173,16 +173,16 @@ namespace MTEngine {
 #ifdef USE_IMGUI
 		ImGui::Begin("Debug Settings");
 
-		if (ImGui::CollapsingHeader("Scene Settings")) {
+		if (ImGui::CollapsingHeader("Mode Settings")) {
 			const char* modeNames[] = { "Sprite_Axis_Sphere", "MultiMesh", "MultiMaterial", "BunnyAndTeapot", "Sound", "GamePadInput" };
 			int currentMode = static_cast<int>(currentDrawMode_);
 
-			if (ImGui::Combo("Draw Mode", &currentMode, modeNames, IM_ARRAYSIZE(modeNames))) {
-				currentDrawMode_ = static_cast<DebugMode>(currentMode);
+			if (ImGui::Combo("Mode", &currentMode, modeNames, IM_ARRAYSIZE(modeNames))) {
+				currentDrawMode_ = static_cast<Mode>(currentMode);
 			}
 		}
 
-		if (currentDrawMode_ != DebugMode::Sound && currentDrawMode_ != DebugMode::GamePadInput) {
+		if (currentDrawMode_ != Mode::Sound && currentDrawMode_ != Mode::GamePadInput) {
 
 			// ライト設定
 			if (ImGui::CollapsingHeader("Light Settings")) {
@@ -213,17 +213,17 @@ namespace MTEngine {
 
 			}
 
+		}
+
+		switch (currentDrawMode_) {
+		case Mode::Sprite_Axis_Sphere:
+
+			// UVTransform
 			if (ImGui::CollapsingHeader("UV Transform")) {
 				ImGui::DragFloat3("UVTranslate", &sprite_->uvTransform.translate.x, 0.01f, -10.0f, 10.0f);
 				ImGui::DragFloat3("UVScale", &sprite_->uvTransform.scale.x, 0.01f, -10.0f, 10.0f);
 				ImGui::SliderAngle("UVRotate", &sprite_->uvTransform.rotate.z, -360.0f, 360.0f);
 			}
-
-		}
-
-		switch (currentDrawMode_) {
-		case DebugMode::Sprite_Axis_Sphere:
-
 
 			// スプライト設定
 			if (ImGui::CollapsingHeader("Sprite Transform")) {
@@ -248,7 +248,7 @@ namespace MTEngine {
 			}
 
 			break;
-		case DebugMode::MultiMesh:
+		case Mode::MultiMesh:
 
 			if (ImGui::CollapsingHeader("MultiMesh Transform")) {
 				ImGui::DragFloat3("MultiMesh Scale", &multiMeshTransform_.scale.x, 0.01f);
@@ -258,7 +258,7 @@ namespace MTEngine {
 
 			break;
 
-		case DebugMode::MultiMaterial:
+		case Mode::MultiMaterial:
 
 			if (ImGui::CollapsingHeader("MultiMaterial Transform")) {
 				ImGui::DragFloat3("MultiMaterial Scale", &multiMaterialTransform_.scale.x, 0.01f);
@@ -268,7 +268,7 @@ namespace MTEngine {
 
 			break;
 
-		case DebugMode::BunnyAndTeapot:
+		case Mode::BunnyAndTeapot:
 
 			if (ImGui::CollapsingHeader("Bunny Transform")) {
 				ImGui::DragFloat3("Bunny Scale", &bunnyTransform_.scale.x, 0.01f);
@@ -284,7 +284,7 @@ namespace MTEngine {
 
 			break;
 
-		case DebugMode::Sound:
+		case Mode::Sound:
 
 			// サウンド設定
 			if (ImGui::CollapsingHeader("Sound Settings")) {
@@ -298,7 +298,7 @@ namespace MTEngine {
 			}
 			break;
 
-		case DebugMode::GamePadInput:
+		case Mode::GamePadInput:
 
 			// コントローラー（GamePad）入力デバッグ表示
 			if (ImGui::CollapsingHeader("GamePad Input Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -382,7 +382,7 @@ namespace MTEngine {
 
 		// モードによる描画の切り替え
 		switch (currentDrawMode_) {
-		case DebugMode::Sprite_Axis_Sphere:
+		case Mode::Sprite_Axis_Sphere:
 
 			// axis.obj
 			commandList->SetGraphicsRootConstantBufferView(1, wvpResource_.GetGPUVirtualAddress());
@@ -399,7 +399,7 @@ namespace MTEngine {
 
 			break;
 
-		case DebugMode::MultiMesh:
+		case Mode::MultiMesh:
 
 			// --- multiMesh.objの描画 ---
 			commandList->SetGraphicsRootConstantBufferView(1, multiMeshWvpResource_.GetGPUVirtualAddress());
@@ -408,7 +408,7 @@ namespace MTEngine {
 
 			break;
 
-		case DebugMode::MultiMaterial:
+		case Mode::MultiMaterial:
 
 			// --- マルチマテリアルモデルの描画 ---
 			commandList->SetGraphicsRootConstantBufferView(1, multiMaterialWvpResource_.GetGPUVirtualAddress());
@@ -416,7 +416,7 @@ namespace MTEngine {
 
 			break;
 
-		case DebugMode::BunnyAndTeapot:
+		case Mode::BunnyAndTeapot:
 
 			// --- バニーの描画 ---
 			commandList->SetGraphicsRootConstantBufferView(1, bunnyWvpResource_.GetGPUVirtualAddress());

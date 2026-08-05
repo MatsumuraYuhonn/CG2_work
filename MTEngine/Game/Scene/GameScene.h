@@ -20,7 +20,7 @@
 //ゲームシーンを管理するクラス
 namespace MTEngine {
 
-    enum class DebugMode {
+    enum class Mode {
         Sprite_Axis_Sphere,
         MultiMesh,
         MultiMaterial,
@@ -127,7 +127,7 @@ namespace MTEngine {
         bool useMonsterBall_ = false;
 
 
-        DebugMode currentDrawMode_ = DebugMode::Sprite_Axis_Sphere;
+        Mode currentDrawMode_ = Mode::Sprite_Axis_Sphere;
 
         bool isSoundPlay = false;
 
