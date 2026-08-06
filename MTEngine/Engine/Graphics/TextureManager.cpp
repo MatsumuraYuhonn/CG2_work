@@ -35,7 +35,8 @@ namespace MTEngine {
 
         // 4. SRVの作成（ヒープからハンドルを確保する実装が DescriptorHeapManager にあると仮定）
         // ※引数にインデックスを直接指定する場合は、マネージャ側で空き番号を管理できるようにするとより良いです
-        uint32_t index = static_cast<uint32_t>(textures_.size() + 1); // 暫定で被らないインデックスを割り当て
+        // 0番はImGuiフォント、1番はSceneビュー用レンダーテクスチャとして予約する。
+        uint32_t index = static_cast<uint32_t>(textures_.size() + 2);
         D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU = srvHeapManager_->GetCPUDescriptorHandle(index);
         D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU = srvHeapManager_->GetGPUDescriptorHandle(index);
 

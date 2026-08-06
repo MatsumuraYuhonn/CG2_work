@@ -114,7 +114,9 @@ namespace MTEngine {
 
         // GameSceneの初期化
         gameScene_ = std::make_unique<GameScene>();
-        gameScene_->Initialize(device.Get(), commandList.Get(), renderer_->GetSrvHeapManager(), audioManager_->GetXAudio2());
+        gameScene_->Initialize(
+            device.Get(), commandList.Get(), renderer_->GetSrvHeapManager(),
+            audioManager_->GetXAudio2(), renderer_->GetSceneTextureHandle());
     }
 
     void Engine::Run() {
@@ -152,7 +154,9 @@ namespace MTEngine {
         auto commandList = renderer_->GetCommandList();
 
         // GameSceneの描画
+        renderer_->BeginScene();
         gameScene_->Draw(commandList);
+        renderer_->EndScene();
 
         // ImGuiの描画
         imGuiManager_->Draw(commandList);
@@ -162,6 +166,7 @@ namespace MTEngine {
     }
 
     void Engine::Finalize() {
+    
         if (gameScene_) {
             gameScene_->Finalize();
             gameScene_.reset();

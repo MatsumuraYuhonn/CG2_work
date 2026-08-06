@@ -34,7 +34,7 @@ namespace MTEngine {
         GameScene() = default;
         ~GameScene() = default;
 
-        void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DescriptorHeapManager* srvHeapManager, IXAudio2* xAudio2);
+        void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DescriptorHeapManager* srvHeapManager, IXAudio2* xAudio2, D3D12_GPU_DESCRIPTOR_HANDLE sceneTextureHandle);
         void Update(int clientWidth, int clientHeight, const Input* input, IXAudio2* xAudio2);
         void Draw(ID3D12GraphicsCommandList* commandList);
         void Finalize();
@@ -130,6 +130,9 @@ namespace MTEngine {
         Mode currentDrawMode_ = Mode::Sprite_Axis_Sphere;
 
         bool isSoundPlay = false;
+
+        D3D12_GPU_DESCRIPTOR_HANDLE sceneTextureHandle_{};
+        bool isEditorLayoutInitialized_ = false;
 
     };
 

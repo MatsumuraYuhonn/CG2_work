@@ -6,6 +6,7 @@
 
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
+#include "externals/imgui/imgui_internal.h"
 #endif
 
 
@@ -23,7 +24,9 @@ namespace MTEngine {
 		return result;
 	}
 
-	void GameScene::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DescriptorHeapManager* srvHeapManager, IXAudio2* xAudio2) {
+    void GameScene::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DescriptorHeapManager* srvHeapManager, IXAudio2* xAudio2, D3D12_GPU_DESCRIPTOR_HANDLE sceneTextureHandle) {
+
+        sceneTextureHandle_ = sceneTextureHandle;
 
 		// 定数バッファの初期化（1回だけ）
 		materialResourceSprite_.Initialize(device);
@@ -171,9 +174,61 @@ namespace MTEngine {
 
 
 #ifdef USE_IMGUI
-		ImGui::Begin("Debug Settings");
+		if (!isEditorLayoutInitialized_) {
+			const ImGuiViewport* viewport = ImGui::GetMainViewport();
+			const ImGuiID dockspaceID = ImGui::GetID("MainDockSpace");
+			ImGui::DockBuilderRemoveNode(dockspaceID);
+			ImGui::DockBuilderAddNode(dockspaceID, ImGuiDockNodeFlags_DockSpace);
+			ImGui::DockBuilderSetNodeSize(dockspaceID, viewport->WorkSize);
 
-		if (ImGui::CollapsingHeader("Mode Settings")) {
+			ImGuiID centerNode = dockspaceID;
+			ImGuiID rightNode = 0;
+			ImGuiID leftNode = 0;
+			ImGuiID bottomNode = 0;
+			ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Right, 0.25f, &rightNode, &centerNode);
+			ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Left, 0.20f, &leftNode, &centerNode);
+			ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Down, 0.30f, &bottomNode, &centerNode);
+			ImGui::DockBuilderDockWindow("Hierarchy", leftNode);
+			ImGui::DockBuilderDockWindow("Inspector", rightNode);
+			ImGui::DockBuilderDockWindow("Console", bottomNode);
+			ImGui::DockBuilderDockWindow("Scene", centerNode);
+			ImGui::DockBuilderFinish(dockspaceID);
+			isEditorLayoutInitialized_ = true;
+		}
+
+		const ImGuiWindowFlags panelFlags = ImGuiWindowFlags_NoCollapse;
+
+		ImGui::Begin("Hierarchy", nullptr, panelFlags);
+		ImGui::TextDisabled("Scene Objects");
+		ImGui::Separator();
+		const char* hierarchyNames[] = { "Axis / Sphere", "Multi Mesh", "Multi Material", "Bunny / Teapot", "Sound", "GamePad Input" };
+		for (int index = 0; index < IM_ARRAYSIZE(hierarchyNames); ++index) {
+			if (ImGui::Selectable(hierarchyNames[index], static_cast<int>(currentDrawMode_) == index)) {
+				currentDrawMode_ = static_cast<Mode>(index);
+			}
+		}
+		ImGui::End();
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		const ImGuiWindowFlags sceneFlags = panelFlags | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+		ImGui::Begin("Scene", nullptr, sceneFlags);
+		const ImVec2 sceneAvailable = ImGui::GetContentRegionAvail();
+		ImGui::Image(ImTextureRef(static_cast<ImTextureID>(sceneTextureHandle_.ptr)), sceneAvailable);
+		ImGui::End();
+		ImGui::PopStyleVar();
+
+		ImGui::Begin("Console", nullptr, panelFlags);
+		ImGui::TextColored(ImVec4(0.38f, 0.78f, 0.52f, 1.0f), "● Scene renderer ready");
+		ImGui::SameLine();
+		ImGui::TextDisabled("|  %s", hierarchyNames[static_cast<int>(currentDrawMode_)]);
+		ImGui::Separator();
+		ImGui::TextDisabled("Select an object in Hierarchy to edit its settings in Inspector.");
+		ImGui::TextDisabled("1: Toggle debug camera    %.1f FPS", ImGui::GetIO().Framerate);
+		ImGui::End();
+
+		ImGui::Begin("Inspector", nullptr, panelFlags);
+
+		if (ImGui::CollapsingHeader("Mode Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 			const char* modeNames[] = { "Sprite_Axis_Sphere", "MultiMesh", "MultiMaterial", "BunnyAndTeapot", "Sound", "GamePadInput" };
 			int currentMode = static_cast<int>(currentDrawMode_);
 
@@ -185,13 +240,13 @@ namespace MTEngine {
 		if (currentDrawMode_ != Mode::Sound && currentDrawMode_ != Mode::GamePadInput) {
 
 			// ライト設定
-			if (ImGui::CollapsingHeader("Light Settings")) {
+			if (ImGui::CollapsingHeader("Light Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 
 				const char* lightingModes[] = { "None", "Lambert", "Half-Lambert" };
 				int currentMode = static_cast<int>(materialResourceSprite_->lightingMode);
 
 				if (ImGui::Combo("Lighting Mode", &currentMode, lightingModes, IM_ARRAYSIZE(lightingModes))) {
-					materialResourceSprite_->lightingMode = static_cast<float>(currentMode);
+					materialResourceSprite_->lightingMode = currentMode;
 				}
 
 				ImGui::Separator();
@@ -234,14 +289,14 @@ namespace MTEngine {
 
 
 			// モデル設定
-			if (ImGui::CollapsingHeader("Axis Model Transform")) {
+			if (ImGui::CollapsingHeader("Axis Model Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
 				ImGui::DragFloat3("Model Scale", &transform_.scale.x, 0.01f);
 				ImGui::DragFloat3("Model Rotate", &transform_.rotate.x, 0.01f);
 				ImGui::DragFloat3("Model Translate", &transform_.translate.x, 0.1f);
 			}
 
 			// 球の設定
-			if (ImGui::CollapsingHeader("Sphere Transform")) {
+			if (ImGui::CollapsingHeader("Sphere Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
 				ImGui::DragFloat3("Sphere Scale", &sphereTransform_.scale.x, 0.01f);
 				ImGui::DragFloat3("Sphere Rotate", &sphereTransform_.rotate.x, 0.01f);
 				ImGui::DragFloat3("Sphere Translate", &sphereTransform_.translate.x, 0.1f);
