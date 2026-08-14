@@ -24,4 +24,7 @@ namespace MTEngine {
 	// ゲームウィンドウの生成と登録を行う
 	HWND CreateGameWindow();
 
+	void AddMouseWheelDelta(float delta);
+	float ConsumeMouseWheelDelta();
+
 }

@@ -16,6 +16,9 @@ namespace MTEngine {
         float padding[3];           // アライメント用パディング
         Matrix4x4 uvTransform;      // UV変換行列
         int32_t lightingMode;
+        int32_t useTexture;
+        int32_t isSelected;
+        float padding3[3];
     };
 
 }

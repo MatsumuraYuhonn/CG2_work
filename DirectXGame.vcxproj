@@ -119,6 +119,8 @@
     <ClInclude Include="MTEngine\Engine\Base\SwapChain.h" />
     <ClInclude Include="MTEngine\Engine\Base\Window.h" />
     <ClInclude Include="MTEngine\Engine\Debug\DebugCamera.h" />
+    <ClInclude Include="MTEngine\Engine\Editor\Editor.h" />
+    <ClInclude Include="MTEngine\Engine\Editor\SceneAxis.h" />
     <ClInclude Include="MTEngine\Engine\Debug\ImGuiManager.h" />
     <ClInclude Include="MTEngine\Engine\Debug\Logger.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\ConstantBuffer.h" />
@@ -154,6 +156,8 @@
     <ClCompile Include="MTEngine\Engine\Base\SwapChain.cpp" />
     <ClCompile Include="MTEngine\Engine\Base\Window.cpp" />
     <ClCompile Include="MTEngine\Engine\Debug\DebugCamera.cpp" />
+    <ClCompile Include="MTEngine\Engine\Editor\Editor.cpp" />
+    <ClCompile Include="MTEngine\Engine\Editor\SceneAxis.cpp" />
     <ClCompile Include="MTEngine\Engine\Debug\ImGuiManager.cpp" />
     <ClCompile Include="MTEngine\Engine\Debug\Logger.cpp" />
     <ClCompile Include="MTEngine\Engine\Graphics\ConstantBuffer.cpp" />

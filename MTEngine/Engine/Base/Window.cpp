@@ -2,7 +2,23 @@
 
 namespace MTEngine {
 
+	float gMouseWheelDelta = 0.0f;
+
+	void AddMouseWheelDelta(float delta) {
+		gMouseWheelDelta += delta;
+	}
+
+	float ConsumeMouseWheelDelta() {
+		const float delta = gMouseWheelDelta;
+		gMouseWheelDelta = 0.0f;
+		return delta;
+	}
+
 	LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+		if (msg == WM_MOUSEWHEEL) {
+			AddMouseWheelDelta(static_cast<float>(GET_WHEEL_DELTA_WPARAM(wparam)) / WHEEL_DELTA);
+			return 0;
+		}
 
 #ifdef USE_IMGUI
 
@@ -25,6 +41,7 @@ namespace MTEngine {
 
 
 	HWND CreateGameWindow() {
+		constexpr DWORD kFixedWindowStyle = WS_OVERLAPPEDWINDOW & ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
 
 		WNDCLASS wc{};
 
@@ -39,13 +56,13 @@ namespace MTEngine {
 		// ウィンドウサイズの計算
 		RECT wrc = { 0, 0, kClientWidth, kClientHeight };
 
-		AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
+		AdjustWindowRect(&wrc, kFixedWindowStyle, false);
 
 		// ウィンドウの生成
 		HWND hwnd = CreateWindow(
 			wc.lpszClassName,
 			L"LE2A_25_マツムラ_ユホン",
-			WS_OVERLAPPEDWINDOW,
+			kFixedWindowStyle,
 			CW_USEDEFAULT,
 			CW_USEDEFAULT,
 			wrc.right - wrc.left,

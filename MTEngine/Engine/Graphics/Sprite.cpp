@@ -79,6 +79,9 @@ namespace MTEngine {
         materialData->color = color;
         materialData->enabledLighting = false;
         materialData->uvTransform = MakeAffineMatrix(uvTransform.scale, uvTransform.rotate, uvTransform.translate);
+        materialData->lightingMode = 0;
+        materialData->useTexture = true;
+        materialData->isSelected = false;
         materialResource_->Unmap(0, nullptr);
 
         Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);

@@ -1,538 +1,500 @@
 #include "GameScene.h"
-#include <cassert>
+#include "MTEngine/Engine/Base/Window.h"
+#include "MTEngine/Engine/Input/Input.h"
+
+#include <charconv>
+#include <algorithm>
+#include <cfloat>
 #include <cmath>
-#include <string>
-#include <utility>
-
-#ifdef USE_IMGUI
-#include "externals/imgui/imgui.h"
-#include "externals/imgui/imgui_internal.h"
-#endif
-
+#include <fstream>
+#include <numbers>
+#include <sstream>
 
 namespace MTEngine {
 
-	Matrix4x4 GameScene::MakeOrthographicMatrix(float left, float top, float right, float bottom, float nearClip, float farClip) {
-		Matrix4x4 result = { 0 };
-		result.m[0][0] = 2.0f / (right - left);
-		result.m[1][1] = 2.0f / (top - bottom);
-		result.m[2][2] = 1.0f / (farClip - nearClip);
-		result.m[3][0] = -(right + left) / (right - left);
-		result.m[3][1] = -(top + bottom) / (top - bottom);
-		result.m[3][2] = -nearClip / (farClip - nearClip);
-		result.m[3][3] = 1.0f;
-		return result;
-	}
-
-    void GameScene::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, DescriptorHeapManager* srvHeapManager, IXAudio2* xAudio2, D3D12_GPU_DESCRIPTOR_HANDLE sceneTextureHandle) {
-
-        sceneTextureHandle_ = sceneTextureHandle;
-
-		// 定数バッファの初期化（1回だけ）
-		materialResourceSprite_.Initialize(device);
-		directionalLightResource_.Initialize(device);
-		wvpResource_.Initialize(device);
-		sphereWvpResource_.Initialize(device);
-		multiMeshWvpResource_.Initialize(device);
-		multiMaterialWvpResource_.Initialize(device);
-		bunnyWvpResource_.Initialize(device);
-		teapotWvpResource_.Initialize(device);
-
-		textureManager_.Initialize(device, srvHeapManager);
-
-		// axis.objモデルの読み込み
-		modelData_ = Model::LoadObjFile("MTEngine/Assets/Resources", "axis.obj");
-		model_ = std::make_unique<Model>();
-		model_->Initialize(device, modelData_);
-
-		// 複数メッシュのモデル読み込み
-		multiMeshModelData_ = Model::LoadObjFile("MTEngine/Assets/Resources", "multiMesh.obj");
-		multiMeshModel_ = std::make_unique<Model>();
-		multiMeshModel_->Initialize(device, multiMeshModelData_);
-		textureManager_.Load(multiMeshModelData_.meshes[0].material.textureFilePath, commandList);
-
-		// GPUハンドル取得
-		multiMeshTextureSrvHandleGPU_ = textureManager_.GetGPUDescriptorHandle(
-			multiMeshModelData_.meshes[0].material.textureFilePath);
-
-		// --- マルチマテリアルモデルの読み込み ---
-		multiMaterialModelData_ = Model::LoadObjFile("MTEngine/Assets/Resources", "multiMaterial.obj");
-		multiMaterialModel_ = std::make_unique<Model>();
-		multiMaterialModel_->Initialize(device, multiMaterialModelData_);
-
-		for (const auto& mesh : multiMaterialModelData_.meshes) {
-			if (!mesh.material.textureFilePath.empty()) {
-				textureManager_.Load(mesh.material.textureFilePath, commandList);
-			}
-		}
-
-		// --- スタンフォードバニーの読み込み ---
-		bunnyModelData_ = Model::LoadObjFile("MTEngine/Assets/Resources", "bunny.obj");
-		bunnyModel_ = std::make_unique<Model>();
-		bunnyModel_->Initialize(device, bunnyModelData_);
-		for (const auto& mesh : bunnyModelData_.meshes) {
-			if (!mesh.material.textureFilePath.empty()) {
-				textureManager_.Load(mesh.material.textureFilePath, commandList);
-			}
-		}
-
-		// --- ユタ・ティーポットの読み込み ---
-		teapotModelData_ = Model::LoadObjFile("MTEngine/Assets/Resources", "teapot.obj");
-		teapotModel_ = std::make_unique<Model>();
-		teapotModel_->Initialize(device, teapotModelData_);
-		for (const auto& mesh : teapotModelData_.meshes) {
-			if (!mesh.material.textureFilePath.empty()) {
-				textureManager_.Load(mesh.material.textureFilePath, commandList);
-			}
-		}
-
-
-		// 球体モデルの生成
-		sphereModelData_.meshes.emplace_back();
-		sphereModelData_.meshes.back().vertices = MakeSphere(16);
-		sphereModelData_.meshes.back().material.textureFilePath = "MTEngine/Assets/Resources/uvChecker.png";
-		sphereModel_ = std::make_unique<Model>();
-		sphereModel_->Initialize(device, sphereModelData_);
-
-		// テクスチャマネージャとロード
-		textureManager_.Load("MTEngine/Assets/Resources/uvChecker.png", commandList);
-		textureManager_.Load(modelData_.meshes[0].material.textureFilePath, commandList);
-
-		textureSrvHandleGPU_ = textureManager_.GetGPUDescriptorHandle(modelData_.meshes[0].material.textureFilePath);
-		sphereTextureSrvHandleGPU_ = textureManager_.GetGPUDescriptorHandle("MTEngine/Assets/Resources/uvChecker.png");
-
-		// スプライト初期化（スプライトもuvCheckerを使う）
-		sprite_ = std::make_unique<Sprite>();
-		sprite_->Initialize(device, 640, 360, sphereTextureSrvHandleGPU_);
-
-		// オーディオ読み込みと再生
-		soundData1_ = SoundLoadWave("MTEngine/Assets/Resources/Alarm01.wav");
-
-		// カメラ初期化
-		debugCamera_.Initialize();
-
-		// 初期パラメータ設定
-		materialResourceSprite_->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-		materialResourceSprite_->enabledLighting = 1;
-		materialResourceSprite_->uvTransform = MakeIdentityMatrix();
-
-		directionalLightResource_->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-		directionalLightResource_->direction = Vector3(0.0f, -1.0f, 1.0f);
-		directionalLightResource_->intensity = 1.0f;
-	}
-
-	void GameScene::Update(int clientWidth, int clientHeight, const Input* input, IXAudio2* xAudio2) {
-
-		if (input->TriggerKey(DIK_1)) {
-			isDebugCameraActive_ = !isDebugCameraActive_;
-		}
-
-		Matrix4x4 viewProjectionMatrix;
-
-		if (isDebugCameraActive_) {
-			debugCamera_.Update(input);
-			viewProjectionMatrix = Multiply(debugCamera_.GetViewMatrix(), debugCamera_.GetProjectionMatrix());
-		}
-		else {
-			Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform_.scale, cameraTransform_.rotate, cameraTransform_.translate);
-			Matrix4x4 viewMatrix = Inverse(cameraMatrix);
-			Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(clientWidth) / float(clientHeight), 0.1f, 100.0f);
-			viewProjectionMatrix = Multiply(viewMatrix, projectionMatrix);
-		}
-
-		// axis.objモデルのワールド行列
-		Matrix4x4 worldMatrix = MakeAffineMatrix(transform_.scale, transform_.rotate, transform_.translate);
-		wvpResource_->WVP = Multiply(worldMatrix, viewProjectionMatrix);
-		wvpResource_->World = worldMatrix;
-
-		// 球体のワールド行列
-		Matrix4x4 sphereWorldMatrix = MakeAffineMatrix(sphereTransform_.scale, sphereTransform_.rotate, sphereTransform_.translate);
-		sphereWvpResource_->WVP = Multiply(sphereWorldMatrix, viewProjectionMatrix);
-		sphereWvpResource_->World = sphereWorldMatrix;
-
-		Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(clientWidth), float(clientHeight), 0.0f, 100.0f);
-		sprite_->Update(projectionMatrixSprite);
-
-		Matrix4x4 multiMeshWorldMatrix = MakeAffineMatrix(multiMeshTransform_.scale, multiMeshTransform_.rotate, multiMeshTransform_.translate);
-		multiMeshWvpResource_->WVP = Multiply(multiMeshWorldMatrix, viewProjectionMatrix);
-		multiMeshWvpResource_->World = multiMeshWorldMatrix;
-
-		// マルチマテリアルモデルのワールド行列
-		Matrix4x4 multiMaterialWorldMatrix = MakeAffineMatrix(multiMaterialTransform_.scale, multiMaterialTransform_.rotate, multiMaterialTransform_.translate);
-		multiMaterialWvpResource_->WVP = Multiply(multiMaterialWorldMatrix, viewProjectionMatrix);
-		multiMaterialWvpResource_->World = multiMaterialWorldMatrix;
-
-		// バニーのワールド行列
-		Matrix4x4 bunnyWorldMatrix = MakeAffineMatrix(bunnyTransform_.scale, bunnyTransform_.rotate, bunnyTransform_.translate);
-		bunnyWvpResource_->WVP = Multiply(bunnyWorldMatrix, viewProjectionMatrix);
-		bunnyWvpResource_->World = bunnyWorldMatrix;
-
-		// ティーポットのワールド行列
-		Matrix4x4 teapotWorldMatrix = MakeAffineMatrix(teapotTransform_.scale, teapotTransform_.rotate, teapotTransform_.translate);
-		teapotWvpResource_->WVP = Multiply(teapotWorldMatrix, viewProjectionMatrix);
-		teapotWvpResource_->World = teapotWorldMatrix;
-
-
-#ifdef USE_IMGUI
-		if (!isEditorLayoutInitialized_) {
-			const ImGuiViewport* viewport = ImGui::GetMainViewport();
-			const ImGuiID dockspaceID = ImGui::GetID("MainDockSpace");
-			ImGui::DockBuilderRemoveNode(dockspaceID);
-			ImGui::DockBuilderAddNode(dockspaceID, ImGuiDockNodeFlags_DockSpace);
-			ImGui::DockBuilderSetNodeSize(dockspaceID, viewport->WorkSize);
-
-			ImGuiID centerNode = dockspaceID;
-			ImGuiID rightNode = 0;
-			ImGuiID leftNode = 0;
-			ImGuiID bottomNode = 0;
-			ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Right, 0.25f, &rightNode, &centerNode);
-			ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Left, 0.20f, &leftNode, &centerNode);
-			ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Down, 0.30f, &bottomNode, &centerNode);
-			ImGui::DockBuilderDockWindow("Hierarchy", leftNode);
-			ImGui::DockBuilderDockWindow("Inspector", rightNode);
-			ImGui::DockBuilderDockWindow("Console", bottomNode);
-			ImGui::DockBuilderDockWindow("Scene", centerNode);
-			ImGui::DockBuilderFinish(dockspaceID);
-			isEditorLayoutInitialized_ = true;
-		}
-
-		const ImGuiWindowFlags panelFlags = ImGuiWindowFlags_NoCollapse;
-
-		ImGui::Begin("Hierarchy", nullptr, panelFlags);
-		ImGui::TextDisabled("Scene Objects");
-		ImGui::Separator();
-		const char* hierarchyNames[] = { "Axis / Sphere", "Multi Mesh", "Multi Material", "Bunny / Teapot", "Sound", "GamePad Input" };
-		for (int index = 0; index < IM_ARRAYSIZE(hierarchyNames); ++index) {
-			if (ImGui::Selectable(hierarchyNames[index], static_cast<int>(currentDrawMode_) == index)) {
-				currentDrawMode_ = static_cast<Mode>(index);
-			}
-		}
-		ImGui::End();
-
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-		const ImGuiWindowFlags sceneFlags = panelFlags | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-		ImGui::Begin("Scene", nullptr, sceneFlags);
-		const ImVec2 sceneAvailable = ImGui::GetContentRegionAvail();
-		ImGui::Image(ImTextureRef(static_cast<ImTextureID>(sceneTextureHandle_.ptr)), sceneAvailable);
-		ImGui::End();
-		ImGui::PopStyleVar();
-
-		ImGui::Begin("Console", nullptr, panelFlags);
-		ImGui::TextColored(ImVec4(0.38f, 0.78f, 0.52f, 1.0f), "● Scene renderer ready");
-		ImGui::SameLine();
-		ImGui::TextDisabled("|  %s", hierarchyNames[static_cast<int>(currentDrawMode_)]);
-		ImGui::Separator();
-		ImGui::TextDisabled("Select an object in Hierarchy to edit its settings in Inspector.");
-		ImGui::TextDisabled("1: Toggle debug camera    %.1f FPS", ImGui::GetIO().Framerate);
-		ImGui::End();
-
-		ImGui::Begin("Inspector", nullptr, panelFlags);
-
-		if (ImGui::CollapsingHeader("Mode Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-			const char* modeNames[] = { "Sprite_Axis_Sphere", "MultiMesh", "MultiMaterial", "BunnyAndTeapot", "Sound", "GamePadInput" };
-			int currentMode = static_cast<int>(currentDrawMode_);
-
-			if (ImGui::Combo("Mode", &currentMode, modeNames, IM_ARRAYSIZE(modeNames))) {
-				currentDrawMode_ = static_cast<Mode>(currentMode);
-			}
-		}
-
-		if (currentDrawMode_ != Mode::Sound && currentDrawMode_ != Mode::GamePadInput) {
-
-			// ライト設定
-			if (ImGui::CollapsingHeader("Light Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-				const char* lightingModes[] = { "None", "Lambert", "Half-Lambert" };
-				int currentMode = static_cast<int>(materialResourceSprite_->lightingMode);
-
-				if (ImGui::Combo("Lighting Mode", &currentMode, lightingModes, IM_ARRAYSIZE(lightingModes))) {
-					materialResourceSprite_->lightingMode = currentMode;
-				}
-
-				ImGui::Separator();
-
-				ImGui::ColorEdit4("Light Color", &directionalLightResource_->color.x);
-
-				if (ImGui::DragFloat3("Light Direction", &directionalLightResource_->direction.x, 0.01f, -1.0f, 1.0f)) {
-					float length = std::sqrt(directionalLightResource_->direction.x * directionalLightResource_->direction.x +
-						directionalLightResource_->direction.y * directionalLightResource_->direction.y +
-						directionalLightResource_->direction.z * directionalLightResource_->direction.z);
-					if (length != 0) {
-						directionalLightResource_->direction.x /= length;
-						directionalLightResource_->direction.y /= length;
-						directionalLightResource_->direction.z /= length;
-					}
-				}
-
-				ImGui::DragFloat("Intensity", &directionalLightResource_->intensity, 0.01f, 0.0f, 10.0f);
-
-			}
-
-		}
-
-		switch (currentDrawMode_) {
-		case Mode::Sprite_Axis_Sphere:
-
-			// UVTransform
-			if (ImGui::CollapsingHeader("UV Transform")) {
-				ImGui::DragFloat3("UVTranslate", &sprite_->uvTransform.translate.x, 0.01f, -10.0f, 10.0f);
-				ImGui::DragFloat3("UVScale", &sprite_->uvTransform.scale.x, 0.01f, -10.0f, 10.0f);
-				ImGui::SliderAngle("UVRotate", &sprite_->uvTransform.rotate.z, -360.0f, 360.0f);
-			}
-
-			// スプライト設定
-			if (ImGui::CollapsingHeader("Sprite Transform")) {
-				ImGui::DragFloat3("Sprite Position", &sprite_->transform.translate.x, 1.0f);
-				ImGui::DragFloat3("Sprite Rotation", &sprite_->transform.rotate.x, 0.01f);
-				ImGui::DragFloat3("Sprite Scale", &sprite_->transform.scale.x, 0.01f);
-			}
-
-
-			// モデル設定
-			if (ImGui::CollapsingHeader("Axis Model Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
-				ImGui::DragFloat3("Model Scale", &transform_.scale.x, 0.01f);
-				ImGui::DragFloat3("Model Rotate", &transform_.rotate.x, 0.01f);
-				ImGui::DragFloat3("Model Translate", &transform_.translate.x, 0.1f);
-			}
-
-			// 球の設定
-			if (ImGui::CollapsingHeader("Sphere Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
-				ImGui::DragFloat3("Sphere Scale", &sphereTransform_.scale.x, 0.01f);
-				ImGui::DragFloat3("Sphere Rotate", &sphereTransform_.rotate.x, 0.01f);
-				ImGui::DragFloat3("Sphere Translate", &sphereTransform_.translate.x, 0.1f);
-			}
-
-			break;
-		case Mode::MultiMesh:
-
-			if (ImGui::CollapsingHeader("MultiMesh Transform")) {
-				ImGui::DragFloat3("MultiMesh Scale", &multiMeshTransform_.scale.x, 0.01f);
-				ImGui::DragFloat3("MultiMesh Rotate", &multiMeshTransform_.rotate.x, 0.01f);
-				ImGui::DragFloat3("MultiMesh Translate", &multiMeshTransform_.translate.x, 0.1f);
-			}
-
-			break;
-
-		case Mode::MultiMaterial:
-
-			if (ImGui::CollapsingHeader("MultiMaterial Transform")) {
-				ImGui::DragFloat3("MultiMaterial Scale", &multiMaterialTransform_.scale.x, 0.01f);
-				ImGui::DragFloat3("MultiMaterial Rotate", &multiMaterialTransform_.rotate.x, 0.01f);
-				ImGui::DragFloat3("MultiMaterial Translate", &multiMaterialTransform_.translate.x, 0.1f);
-			}
-
-			break;
-
-		case Mode::BunnyAndTeapot:
-
-			if (ImGui::CollapsingHeader("Bunny Transform")) {
-				ImGui::DragFloat3("Bunny Scale", &bunnyTransform_.scale.x, 0.01f);
-				ImGui::DragFloat3("Bunny Rotate", &bunnyTransform_.rotate.x, 0.01f);
-				ImGui::DragFloat3("Bunny Translate", &bunnyTransform_.translate.x, 0.1f);
-			}
-
-			if (ImGui::CollapsingHeader("Teapot Transform")) {
-				ImGui::DragFloat3("Teapot Scale", &teapotTransform_.scale.x, 0.01f);
-				ImGui::DragFloat3("Teapot Rotate", &teapotTransform_.rotate.x, 0.01f);
-				ImGui::DragFloat3("Teapot Translate", &teapotTransform_.translate.x, 0.1f);
-			}
-
-			break;
-
-		case Mode::Sound:
-
-			// サウンド設定
-			if (ImGui::CollapsingHeader("Sound Settings")) {
-
-				if (ImGui::Button("Play Sound")) {
-
-					SoundPlayWave(xAudio2, &soundData1_);
-
-				}
-
-			}
-			break;
-
-		case Mode::GamePadInput:
-
-			// コントローラー（GamePad）入力デバッグ表示
-			if (ImGui::CollapsingHeader("GamePad Input Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-				const GamePad* gamePad = input->GetGamePad();
-
-				if (!gamePad) {
-					ImGui::TextDisabled("GamePad is not available.");
-					break;
-				}
-
-				// 表示対象のボタン一覧（GamePadButtonと表示名のペア）
-				static const std::pair<GamePadButton, const char*> kButtonList[] = {
-					{ GamePadButton::Up, "Up" },{ GamePadButton::Down, "Down" },
-					{ GamePadButton::Left, "Left" },{ GamePadButton::Right, "Right" },
-					{ GamePadButton::Start, "Start" },{ GamePadButton::Back, "Back" },
-					{ GamePadButton::LThumb, "LThumb" },{ GamePadButton::RThumb, "RThumb" },
-					{ GamePadButton::LShoulder, "LShoulder" },{ GamePadButton::RShoulder, "RShoulder" },
-					{ GamePadButton::A, "A" },{ GamePadButton::B, "B" },
-					{ GamePadButton::X, "X" },{ GamePadButton::Y, "Y" },
-				};
-
-				// 1台のみ接続する想定なので、コントローラー0番だけを表示
-				bool isConnected = gamePad->IsConnected();
-
-				if (isConnected) {
-
-					// 押されているボタン一覧
-					ImGui::Text("Pushed Buttons:");
-					ImGui::Indent();
-
-					std::string pushedButtons;
-					for (const auto& btn : kButtonList) {
-						if (gamePad->PushButton(btn.first)) {
-							if (!pushedButtons.empty()) {
-								pushedButtons += ", ";
-							}
-							pushedButtons += btn.second;
-						}
-					}
-
-					if (pushedButtons.empty()) {
-						ImGui::TextDisabled("(None)");
-					}
-					else {
-						ImGui::TextWrapped("%s", pushedButtons.c_str());
-					}
-
-					ImGui::Unindent();
-					ImGui::Separator();
-
-					// スティック・トリガーの値
-					const StickState& leftStick = gamePad->GetLeftStick();
-					const StickState& rightStick = gamePad->GetRightStick();
-					float leftTrigger = gamePad->GetLeftTrigger();
-					float rightTrigger = gamePad->GetRightTrigger();
-
-					ImGui::Text("Left Stick  : (%.3f, %.3f)", leftStick.x, leftStick.y);
-					ImGui::Text("Right Stick : (%.3f, %.3f)", rightStick.x, rightStick.y);
-					ImGui::Text("Left Trigger  : %.3f", leftTrigger);
-					ImGui::Text("Right Trigger : %.3f", rightTrigger);
-				}
-				else {
-					ImGui::TextDisabled("Controller is not connected.");
-				}
-			}
-
-			break;
-
-		}
-
-		//ImGui::Checkbox("Debug Camera", &isDebugCameraActive_);
-		ImGui::End();
-#endif
-	}
-
-	void GameScene::Draw(ID3D12GraphicsCommandList* commandList) {
-
-		commandList->SetGraphicsRootConstantBufferView(0, materialResourceSprite_.GetGPUVirtualAddress());
-		commandList->SetGraphicsRootConstantBufferView(2, directionalLightResource_.GetGPUVirtualAddress());
-
-		// モードによる描画の切り替え
-		switch (currentDrawMode_) {
-		case Mode::Sprite_Axis_Sphere:
-
-			// axis.obj
-			commandList->SetGraphicsRootConstantBufferView(1, wvpResource_.GetGPUVirtualAddress());
-			commandList->SetGraphicsRootDescriptorTable(3, textureSrvHandleGPU_);
-			model_->Draw(commandList, &textureManager_);
-
-			// sphere
-			commandList->SetGraphicsRootConstantBufferView(1, sphereWvpResource_.GetGPUVirtualAddress());
-			commandList->SetGraphicsRootDescriptorTable(3, sphereTextureSrvHandleGPU_);
-			sphereModel_->Draw(commandList, &textureManager_);
-
-			// --- スプライトの描画 ---
-			sprite_->Draw(commandList, directionalLightResource_.GetResource());
-
-			break;
-
-		case Mode::MultiMesh:
-
-			// --- multiMesh.objの描画 ---
-			commandList->SetGraphicsRootConstantBufferView(1, multiMeshWvpResource_.GetGPUVirtualAddress());
-			commandList->SetGraphicsRootDescriptorTable(3, multiMeshTextureSrvHandleGPU_);
-			multiMeshModel_->Draw(commandList, &textureManager_);
-
-			break;
-
-		case Mode::MultiMaterial:
-
-			// --- マルチマテリアルモデルの描画 ---
-			commandList->SetGraphicsRootConstantBufferView(1, multiMaterialWvpResource_.GetGPUVirtualAddress());
-			multiMaterialModel_->Draw(commandList, &textureManager_);
-
-			break;
-
-		case Mode::BunnyAndTeapot:
-
-			// --- バニーの描画 ---
-			commandList->SetGraphicsRootConstantBufferView(1, bunnyWvpResource_.GetGPUVirtualAddress());
-			bunnyModel_->Draw(commandList, &textureManager_);
-
-			// --- ティーポットの描画 ---
-			commandList->SetGraphicsRootConstantBufferView(1, teapotWvpResource_.GetGPUVirtualAddress());
-			teapotModel_->Draw(commandList, &textureManager_);
-
-			break;
-		}
-
-	}
-
-	void GameScene::Finalize() {
-		SoundUnload(&soundData1_);
-	}
-
-	std::vector<VertexData> GameScene::MakeSphere(uint32_t subdivision) {
-		std::vector<VertexData> vertices;
-		vertices.resize(subdivision * subdivision * 6);
-
-		const float pi = 3.14159265358979f;
-		const float kLonEvery = 2.0f * pi / float(subdivision);
-		const float kLatEvery = pi / float(subdivision);
-
-		auto SpherePos = [](float lat, float lon) {
-			return Vector3(
-				std::cos(lat) * std::cos(lon),
-				std::sin(lat),
-				std::cos(lat) * std::sin(lon)
-			);
-			};
-
-		for (uint32_t latIndex = 0; latIndex < subdivision; ++latIndex) {
-			float lat = -pi / 2.0f + kLatEvery * latIndex;
-
-			for (uint32_t lonIndex = 0; lonIndex < subdivision; ++lonIndex) {
-				float lon = lonIndex * kLonEvery;
-				uint32_t start = (latIndex * subdivision + lonIndex) * 6;
-
-				float u0 = float(lonIndex) / float(subdivision);
-				float u1 = float(lonIndex + 1) / float(subdivision);
-				float v0 = 1.0f - float(latIndex) / float(subdivision);
-				float v1 = 1.0f - float(latIndex + 1) / float(subdivision);
-
-				Vector3 a = SpherePos(lat, lon);
-				Vector3 b = SpherePos(lat + kLatEvery, lon);
-				Vector3 c = SpherePos(lat, lon + kLonEvery);
-				Vector3 d = SpherePos(lat + kLatEvery, lon + kLonEvery);
-
-				vertices[start + 0] = { Vector4(a.x, a.y, a.z, 1.0f), Vector2(u0, v0), a };
-				vertices[start + 1] = { Vector4(b.x, b.y, b.z, 1.0f), Vector2(u0, v1), b };
-				vertices[start + 2] = { Vector4(c.x, c.y, c.z, 1.0f), Vector2(u1, v0), c };
-
-				vertices[start + 3] = { Vector4(c.x, c.y, c.z, 1.0f), Vector2(u1, v0), c };
-				vertices[start + 4] = { Vector4(b.x, b.y, b.z, 1.0f), Vector2(u0, v1), b };
-				vertices[start + 5] = { Vector4(d.x, d.y, d.z, 1.0f), Vector2(u1, v1), d };
-			}
-		}
-		return vertices;
-	}
+    namespace {
+
+        Matrix4x4 MakeOrientationMarkerProjectionMatrix() {
+            Matrix4x4 projection{};
+            projection.m[0][0] = 0.12f;
+            projection.m[1][1] = 0.12f;
+            projection.m[2][2] = 0.01f;
+            projection.m[3][2] = 0.10f;
+            projection.m[3][3] = 1.0f;
+            return projection;
+        }
+
+        bool TryParseTileId(const std::string& text, int32_t& tileId) {
+            const size_t first = text.find_first_not_of(" \t");
+            if (first == std::string::npos) {
+                return false;
+            }
+
+            const size_t last = text.find_last_not_of(" \t");
+            const char* begin = text.data() + first;
+            const char* end = text.data() + last + 1;
+            const auto [parsedEnd, error] = std::from_chars(begin, end, tileId);
+            return error == std::errc{} && parsedEnd == end;
+        }
+
+    }
+
+    bool TileMap::LoadFromCsv(const std::string& filePath) {
+        Clear();
+
+        std::ifstream file(filePath);
+        if (!file.is_open()) {
+            lastError_ = "CSV file could not be opened: " + filePath;
+            return false;
+        }
+
+        std::string line;
+        int32_t csvLineNumber = 0;
+        while (std::getline(file, line)) {
+            ++csvLineNumber;
+
+            // UTF-8 BOM が先頭に存在しても、最初の数値を正しく読み込めるようにします。
+            if (csvLineNumber == 1 && line.starts_with("\xEF\xBB\xBF")) {
+                line.erase(0, 3);
+            }
+
+            const size_t first = line.find_first_not_of(" \t\r");
+            if (first == std::string::npos || line[first] == '#') {
+                continue;
+            }
+
+            std::vector<int32_t> row;
+            std::stringstream stream(line);
+            std::string field;
+            while (std::getline(stream, field, ',')) {
+                int32_t tileId = kEmptyTileId;
+                if (!TryParseTileId(field, tileId)) {
+                    Clear();
+                    lastError_ = "Invalid tile ID at CSV line " + std::to_string(csvLineNumber) + ".";
+                    return false;
+                }
+                row.push_back(tileId);
+            }
+
+            if (row.empty()) {
+                Clear();
+                lastError_ = "Empty row at CSV line " + std::to_string(csvLineNumber) + ".";
+                return false;
+            }
+
+            if (width_ == 0) {
+                width_ = static_cast<int32_t>(row.size());
+            }
+            else if (static_cast<int32_t>(row.size()) != width_) {
+                Clear();
+                lastError_ = "Column count differs at CSV line " + std::to_string(csvLineNumber) + ".";
+                return false;
+            }
+
+            tiles_.insert(tiles_.end(), row.begin(), row.end());
+            ++height_;
+        }
+
+        if (tiles_.empty()) {
+            lastError_ = "CSV contains no tile rows: " + filePath;
+            return false;
+        }
+
+        return true;
+    }
+
+    void TileMap::Clear() {
+        width_ = 0;
+        height_ = 0;
+        tiles_.clear();
+        lastError_.clear();
+    }
+
+    int32_t TileMap::GetTileId(int32_t column, int32_t row) const {
+        if (column < 0 || row < 0 || column >= width_ || row >= height_) {
+            return kEmptyTileId;
+        }
+        return tiles_[static_cast<size_t>(row) * width_ + column];
+    }
+
+    std::vector<TileMapCell> TileMap::CreateCells(float tileSize, const Vector3& origin) const {
+        std::vector<TileMapCell> cells;
+        if (tileSize <= 0.0f) {
+            return cells;
+        }
+
+        cells.reserve(tiles_.size());
+        for (int32_t row = 0; row < height_; ++row) {
+            for (int32_t column = 0; column < width_; ++column) {
+                const int32_t tileId = GetTileId(column, row);
+                if (tileId == kEmptyTileId) {
+                    continue;
+                }
+
+                cells.push_back({
+                    tileId,
+                    column,
+                    row,
+                    {
+                        origin.x + static_cast<float>(column) * tileSize,
+                        origin.y + static_cast<float>(height_ - 1 - row) * tileSize,
+                        origin.z,
+                    },
+                });
+            }
+        }
+        return cells;
+    }
+
+    bool GameScene::Initialize(
+        Microsoft::WRL::ComPtr<ID3D12Device> device,
+        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList,
+        DescriptorHeapManager* srvHeapManager,
+        const std::string& csvFilePath)
+    {
+        if (!tileMap_.LoadFromCsv(csvFilePath)) {
+            return false;
+        }
+
+        constexpr float kTileSize = 2.0f;
+        const Vector3 mapOrigin = {
+            -static_cast<float>(tileMap_.GetWidth() - 1) * kTileSize * 0.5f,
+            -static_cast<float>(tileMap_.GetHeight() - 1) * kTileSize * 0.5f,
+            0.0f,
+        };
+        cells_ = tileMap_.CreateCells(kTileSize, mapOrigin);
+
+        const ModelData cubeModelData = Model::LoadObjFile("MTEngine/Assets/Resources/cube", "cube.obj");
+        if (!cubeModel_.Initialize(device, cubeModelData)) {
+            return false;
+        }
+
+        const ModelData playerModelData = Model::LoadObjFile("MTEngine/Assets/Resources/player", "player.obj");
+        if (!playerModel_.Initialize(device, playerModelData)) {
+            return false;
+        }
+
+        textureManager_.Initialize(device, srvHeapManager);
+        for (const MeshData& mesh : cubeModelData.meshes) {
+            if (!mesh.material.textureFilePath.empty()) {
+                textureManager_.Load(mesh.material.textureFilePath, commandList);
+            }
+        }
+        for (const MeshData& mesh : playerModelData.meshes) {
+            if (!mesh.material.textureFilePath.empty()) {
+                textureManager_.Load(mesh.material.textureFilePath, commandList);
+            }
+        }
+
+        if (!materialConstantBuffer_.Initialize(device) ||
+            !playerMaterialConstantBuffer_.Initialize(device) ||
+            !playerTransformConstantBuffer_.Initialize(device) ||
+            !selectionMaterialConstantBuffer_.Initialize(device) ||
+            !lightConstantBuffer_.Initialize(device)) {
+            return false;
+        }
+
+        transformConstantBuffers_.clear();
+        transformConstantBuffers_.reserve(cells_.size());
+        for (size_t cellIndex = 0; cellIndex < cells_.size(); ++cellIndex) {
+            auto transformConstantBuffer = std::make_unique<TransformationMatrixConstantBuffer>();
+            if (!transformConstantBuffer->Initialize(device)) {
+                return false;
+            }
+            transformConstantBuffers_.push_back(std::move(transformConstantBuffer));
+        }
+
+        for (size_t axisIndex = 0; axisIndex < axisMaterialConstantBuffers_.size(); ++axisIndex) {
+            if (!axisMaterialConstantBuffers_[axisIndex].Initialize(device) ||
+                !axisTransformConstantBuffers_[axisIndex].Initialize(device)) {
+                return false;
+            }
+        }
+
+        materialConstantBuffer_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        materialConstantBuffer_->enabledLighting = 0;
+        materialConstantBuffer_->uvTransform = MakeIdentityMatrix();
+        materialConstantBuffer_->lightingMode = 2;
+        materialConstantBuffer_->useTexture = 1;
+        materialConstantBuffer_->isSelected = 0;
+
+        playerMaterialConstantBuffer_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        playerMaterialConstantBuffer_->enabledLighting = 1;
+        playerMaterialConstantBuffer_->uvTransform = MakeIdentityMatrix();
+        playerMaterialConstantBuffer_->lightingMode = 2;
+        playerMaterialConstantBuffer_->useTexture = 1;
+        playerMaterialConstantBuffer_->isSelected = 0;
+
+        selectionMaterialConstantBuffer_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        selectionMaterialConstantBuffer_->enabledLighting = 0;
+        selectionMaterialConstantBuffer_->uvTransform = MakeIdentityMatrix();
+        selectionMaterialConstantBuffer_->lightingMode = 0;
+        selectionMaterialConstantBuffer_->useTexture = 1;
+        selectionMaterialConstantBuffer_->isSelected = 1;
+
+        const Vector4 axisColors[] = {
+            { 0.95f, 0.15f, 0.15f, 1.0f }, // +X
+            { 0.15f, 0.95f, 0.25f, 1.0f }, // +Y
+            { 0.20f, 0.45f, 1.00f, 1.0f }, // +Z
+        };
+        for (size_t axisIndex = 0; axisIndex < axisMaterialConstantBuffers_.size(); ++axisIndex) {
+            MaterialConstantBuffer& axisMaterial = axisMaterialConstantBuffers_[axisIndex];
+            axisMaterial->color = axisColors[axisIndex];
+            axisMaterial->enabledLighting = 0;
+            axisMaterial->uvTransform = MakeIdentityMatrix();
+            axisMaterial->lightingMode = 0;
+            axisMaterial->useTexture = 0;
+            axisMaterial->isSelected = 0;
+        }
+
+        lightConstantBuffer_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        lightConstantBuffer_->direction = { 0.3f, -1.0f, 0.2f };
+        lightConstantBuffer_->intensity = 1.0f;
+
+        // The player model's bottom is 0.8 units below its origin at this scale.
+        // Start on the floor inside the map.
+        playerPosition_ = { -24.69f, -7.20f, -1.20f };
+        playerRotationY_ = -std::numbers::pi_v<float> / 2.0f;
+        playerHorizontalVelocity_ = 0.0f;
+        playerVerticalVelocity_ = 0.0f;
+        isPlayerGrounded_ = true;
+        previousPlayerUpdateTime_ = std::chrono::steady_clock::now();
+        return true;
+    }
+
+    void GameScene::UpdatePlayer(const Input* input) {
+        if (previousPlayerUpdateTime_ == std::chrono::steady_clock::time_point{}) {
+            previousPlayerUpdateTime_ = std::chrono::steady_clock::now();
+            return;
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+        const float deltaTime = (std::min)(
+            std::chrono::duration<float>(now - previousPlayerUpdateTime_).count(),
+            1.0f / 30.0f);
+        previousPlayerUpdateTime_ = now;
+
+        constexpr float kGravity = -34.0f;
+        constexpr float kJumpSpeed = 16.5f;
+        constexpr float kPlayerHalfWidth = 0.6f;
+        constexpr float kPlayerHalfHeight = 0.8f;
+        constexpr float kTileHalfExtent = 1.0f;
+        constexpr float kTileTopOffset = 1.0f;
+        constexpr float kPlayerTurnResponse = 12.0f;
+
+        float horizontalInput = 0.0f;
+        bool jumpRequested = false;
+        if (input) {
+            if (input->PushKey(DIK_A) || input->PushKey(DIK_LEFT)) {
+                horizontalInput -= 1.0f;
+            }
+            if (input->PushKey(DIK_D) || input->PushKey(DIK_RIGHT)) {
+                horizontalInput += 1.0f;
+            }
+            jumpRequested = input->TriggerKey(DIK_W);
+
+            const GamePad* gamePad = input->GetGamePad();
+            if (gamePad && gamePad->IsConnected()) {
+                horizontalInput += gamePad->GetLeftStick().x;
+                jumpRequested = jumpRequested || gamePad->TriggerButton(GamePadButton::B);
+            }
+
+            horizontalInput = std::clamp(horizontalInput, -1.0f, 1.0f);
+            if (isPlayerGrounded_ && jumpRequested) {
+                playerVerticalVelocity_ = kJumpSpeed;
+                isPlayerGrounded_ = false;
+            }
+        }
+
+        if (horizontalInput != 0.0f) {
+            playerHorizontalVelocity_ += horizontalInput * playerMoveAcceleration_ * deltaTime;
+        }
+        else {
+            playerHorizontalVelocity_ *= std::exp(-playerVelocityDamping_ * deltaTime);
+            if (std::abs(playerHorizontalVelocity_) < 0.01f) {
+                playerHorizontalVelocity_ = 0.0f;
+            }
+        }
+        playerHorizontalVelocity_ = std::clamp(
+            playerHorizontalVelocity_,
+            -playerMaxMoveSpeed_,
+            playerMaxMoveSpeed_);
+
+        // Keep facing the actual movement direction, but turn toward it smoothly.
+        if (std::abs(playerHorizontalVelocity_) >= 0.01f) {
+            const float targetRotationY = playerHorizontalVelocity_ > 0.0f
+                ? -std::numbers::pi_v<float> / 2.0f
+                : std::numbers::pi_v<float> / 2.0f;
+            const float rotationDifference = std::remainder(
+                targetRotationY - playerRotationY_,
+                2.0f * std::numbers::pi_v<float>);
+            const float interpolation = 1.0f - std::exp(-kPlayerTurnResponse * deltaTime);
+            playerRotationY_ = std::remainder(
+                playerRotationY_ + rotationDifference * interpolation,
+                2.0f * std::numbers::pi_v<float>);
+        }
+
+        const float previousX = playerPosition_.x;
+        playerPosition_.x += playerHorizontalVelocity_ * deltaTime;
+
+        const float playerBottom = playerPosition_.y - kPlayerHalfHeight;
+        const float playerTop = playerPosition_.y + kPlayerHalfHeight;
+        for (const TileMapCell& cell : cells_) {
+            const float tileBottom = cell.worldPosition.y - kTileHalfExtent;
+            const float tileTop = cell.worldPosition.y + kTileHalfExtent;
+            if (playerBottom >= tileTop || playerTop <= tileBottom) {
+                continue;
+            }
+
+            const float tileLeft = cell.worldPosition.x - kTileHalfExtent;
+            const float tileRight = cell.worldPosition.x + kTileHalfExtent;
+            const float previousLeft = previousX - kPlayerHalfWidth;
+            const float previousRight = previousX + kPlayerHalfWidth;
+            const float playerLeft = playerPosition_.x - kPlayerHalfWidth;
+            const float playerRight = playerPosition_.x + kPlayerHalfWidth;
+
+            if (playerHorizontalVelocity_ < 0.0f && previousLeft >= tileRight && playerLeft < tileRight) {
+                playerPosition_.x = (std::max)(playerPosition_.x, tileRight + kPlayerHalfWidth);
+                playerHorizontalVelocity_ = 0.0f;
+            }
+            else if (playerHorizontalVelocity_ > 0.0f && previousRight <= tileLeft && playerRight > tileLeft) {
+                playerPosition_.x = (std::min)(playerPosition_.x, tileLeft - kPlayerHalfWidth);
+                playerHorizontalVelocity_ = 0.0f;
+            }
+        }
+
+        playerVerticalVelocity_ += kGravity * deltaTime;
+        const float previousY = playerPosition_.y;
+        playerPosition_.y += playerVerticalVelocity_ * deltaTime;
+
+        isPlayerGrounded_ = false;
+        float landingY = -FLT_MAX;
+        for (const TileMapCell& cell : cells_) {
+            if (std::abs(playerPosition_.x - cell.worldPosition.x) > kTileHalfExtent + kPlayerHalfWidth) {
+                continue;
+            }
+
+            const float tileTop = cell.worldPosition.y + kTileTopOffset;
+            const float playerBottomBeforeMove = previousY - kPlayerHalfHeight;
+            const float playerBottomAfterMove = playerPosition_.y - kPlayerHalfHeight;
+            if (playerVerticalVelocity_ <= 0.0f &&
+                playerBottomBeforeMove >= tileTop &&
+                playerBottomAfterMove <= tileTop) {
+                landingY = (std::max)(landingY, tileTop + kPlayerHalfHeight);
+            }
+        }
+
+        if (landingY > -FLT_MAX) {
+            playerPosition_.y = landingY;
+            playerVerticalVelocity_ = 0.0f;
+            isPlayerGrounded_ = true;
+        }
+    }
+
+    void GameScene::Draw(
+        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList,
+        const Matrix4x4& viewMatrix,
+        const Matrix4x4& projectionMatrix)
+    {
+        commandList->SetGraphicsRootConstantBufferView(0, materialConstantBuffer_.GetGPUVirtualAddress());
+        commandList->SetGraphicsRootConstantBufferView(2, lightConstantBuffer_.GetGPUVirtualAddress());
+
+        constexpr Vector3 kCubeScale = { 1.0f, 1.0f, 1.0f };
+        for (size_t cellIndex = 0; cellIndex < cells_.size(); ++cellIndex) {
+            const TileMapCell& cell = cells_[cellIndex];
+            TransformationMatrixConstantBuffer& transformConstantBuffer = *transformConstantBuffers_[cellIndex];
+            const Matrix4x4 worldMatrix = MakeAffineMatrix(
+                kCubeScale,
+                { 0.0f, 0.0f, 0.0f },
+                cell.worldPosition);
+            transformConstantBuffer->World = worldMatrix;
+            transformConstantBuffer->WVP = Multiply(Multiply(worldMatrix, viewMatrix), projectionMatrix);
+            commandList->SetGraphicsRootConstantBufferView(
+                0,
+                cellIndex == static_cast<size_t>(selectedCellIndex_)
+                    ? selectionMaterialConstantBuffer_.GetGPUVirtualAddress()
+                    : materialConstantBuffer_.GetGPUVirtualAddress());
+            commandList->SetGraphicsRootConstantBufferView(1, transformConstantBuffer.GetGPUVirtualAddress());
+            cubeModel_.Draw(commandList, &textureManager_);
+        }
+
+        constexpr Vector3 kPlayerScale = { 2.0f, 2.0f, 2.0f };
+        const Vector3 playerRotation = { 0.0f, playerRotationY_, 0.0f };
+        const Matrix4x4 playerWorldMatrix = MakeAffineMatrix(
+            kPlayerScale,
+            playerRotation,
+            playerPosition_);
+        playerTransformConstantBuffer_->World = playerWorldMatrix;
+        playerTransformConstantBuffer_->WVP = Multiply(
+            Multiply(playerWorldMatrix, viewMatrix), projectionMatrix);
+        commandList->SetGraphicsRootConstantBufferView(
+            0,
+            playerMaterialConstantBuffer_.GetGPUVirtualAddress());
+        commandList->SetGraphicsRootConstantBufferView(
+            1,
+            playerTransformConstantBuffer_.GetGPUVirtualAddress());
+        playerModel_.Draw(commandList, &textureManager_);
+
+        constexpr int32_t kMarkerSize = 128;
+        constexpr int32_t kMarkerMargin = 16;
+        D3D12_VIEWPORT markerViewport{};
+        markerViewport.TopLeftX = static_cast<float>(kClientWidth - kMarkerMargin - kMarkerSize);
+        markerViewport.TopLeftY = static_cast<float>(kMarkerMargin);
+        markerViewport.Width = static_cast<float>(kMarkerSize);
+        markerViewport.Height = static_cast<float>(kMarkerSize);
+        markerViewport.MinDepth = 0.0f;
+        markerViewport.MaxDepth = 1.0f;
+        const D3D12_RECT markerScissorRect{
+            static_cast<LONG>(markerViewport.TopLeftX),
+            static_cast<LONG>(markerViewport.TopLeftY),
+            static_cast<LONG>(markerViewport.TopLeftX + markerViewport.Width),
+            static_cast<LONG>(markerViewport.TopLeftY + markerViewport.Height),
+        };
+        commandList->RSSetViewports(1, &markerViewport);
+        commandList->RSSetScissorRects(1, &markerScissorRect);
+
+        Matrix4x4 rotationOnlyView = viewMatrix;
+        rotationOnlyView.m[3][0] = 0.0f;
+        rotationOnlyView.m[3][1] = 0.0f;
+        rotationOnlyView.m[3][2] = 0.0f;
+        rotationOnlyView.m[3][3] = 1.0f;
+
+        // Positive world axes: X is red, Y is green, and Z is blue.
+        constexpr Vector3 kAxisScales[] = {
+            { 3.0f, 0.08f, 0.08f },
+            { 0.08f, 3.0f, 0.08f },
+            { 0.08f, 0.08f, 3.0f },
+        };
+        constexpr Vector3 kAxisPositions[] = {
+            { 3.0f, 0.0f, 0.0f },
+            { 0.0f, 3.0f, 0.0f },
+            { 0.0f, 0.0f, 3.0f },
+        };
+        for (size_t axisIndex = 0; axisIndex < axisTransformConstantBuffers_.size(); ++axisIndex) {
+            TransformationMatrixConstantBuffer& axisTransform = axisTransformConstantBuffers_[axisIndex];
+            const Matrix4x4 worldMatrix = MakeAffineMatrix(
+                kAxisScales[axisIndex],
+                { 0.0f, 0.0f, 0.0f },
+                kAxisPositions[axisIndex]);
+            axisTransform->World = worldMatrix;
+            axisTransform->WVP = Multiply(
+                Multiply(worldMatrix, rotationOnlyView),
+                MakeOrientationMarkerProjectionMatrix());
+            commandList->SetGraphicsRootConstantBufferView(
+                0,
+                axisMaterialConstantBuffers_[axisIndex].GetGPUVirtualAddress());
+            commandList->SetGraphicsRootConstantBufferView(1, axisTransform.GetGPUVirtualAddress());
+            cubeModel_.Draw(commandList, &textureManager_);
+        }
+
+        D3D12_VIEWPORT sceneViewport{};
+        sceneViewport.Width = static_cast<float>(kClientWidth);
+        sceneViewport.Height = static_cast<float>(kClientHeight);
+        sceneViewport.MinDepth = 0.0f;
+        sceneViewport.MaxDepth = 1.0f;
+        const D3D12_RECT sceneScissorRect{ 0, 0, kClientWidth, kClientHeight };
+        commandList->RSSetViewports(1, &sceneViewport);
+        commandList->RSSetScissorRects(1, &sceneScissorRect);
+    }
 
 }

@@ -13,6 +13,9 @@ struct Material
     int enabledLighting; // ライティングの有効フラグ
     float4x4 uvTransform; // UV変換用行列
     int lightingMode;
+    int useTexture;
+    int isSelected;
+    float3 padding3;
 
 };
     

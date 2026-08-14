@@ -112,11 +112,18 @@ namespace MTEngine {
             renderer_->GetSrvHeapManager()->GetGPUDescriptorHandle(0)
         );
 
-        // GameSceneの初期化
-        gameScene_ = std::make_unique<GameScene>();
-        gameScene_->Initialize(
-            device.Get(), commandList.Get(), renderer_->GetSrvHeapManager(),
-            audioManager_->GetXAudio2(), renderer_->GetSceneTextureHandle());
+        debugCamera_.Initialize();
+
+        const bool isGameSceneInitialized = gameScene_.Initialize(
+            device,
+            commandList,
+            renderer_->GetSrvHeapManager(),
+            "MTEngine/Assets/Resources/Stages/sample_stage.csv");
+        assert(isGameSceneInitialized);
+
+        editor_ = std::make_unique<Editor>();
+        editor_->Initialize(renderer_->GetSceneTextureHandle(), &gameScene_, &debugCamera_);
+
     }
 
     void Engine::Run() {
@@ -141,8 +148,10 @@ namespace MTEngine {
         // ImGuiのフレーム開始
         imGuiManager_->BeginFrame();
 
-        // GameSceneの更新
-        gameScene_->Update(kClientWidth, kClientHeight, input_.get(), audioManager_->GetXAudio2());
+        editor_->Update();
+        gameScene_.SetSelectedCellIndex(editor_->GetSelectedTileIndex());
+        gameScene_.UpdatePlayer(input_.get());
+        debugCamera_.Update(input_.get(), editor_->IsSceneViewFocused());
 
         imGuiManager_->EndFrame();
     }
@@ -153,9 +162,11 @@ namespace MTEngine {
 
         auto commandList = renderer_->GetCommandList();
 
-        // GameSceneの描画
         renderer_->BeginScene();
-        gameScene_->Draw(commandList);
+        gameScene_.Draw(
+            commandList,
+            debugCamera_.GetViewMatrix(),
+            debugCamera_.GetProjectionMatrix());
         renderer_->EndScene();
 
         // ImGuiの描画
@@ -167,15 +178,12 @@ namespace MTEngine {
 
     void Engine::Finalize() {
     
-        if (gameScene_) {
-            gameScene_->Finalize();
-            gameScene_.reset();
-        }
-
         if (audioManager_) {
             audioManager_->Finalize();
             audioManager_.reset();
         }
+
+        editor_.reset();
 
         if (imGuiManager_) {
             imGuiManager_->Finalize();

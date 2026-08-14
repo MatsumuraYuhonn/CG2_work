@@ -26,7 +26,11 @@
 PixelShaderOutput main(VertexShaderOutput input)
 {
     PixelShaderOutput output;
-    float4 textureColor = gTexture.Sample(gSampler, input.texcoord);
+    float4 textureColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    if (gMaterial.useTexture != 0)
+    {
+        textureColor = gTexture.Sample(gSampler, input.texcoord);
+    }
 
     // ライティングが有効、かつモードがNone（0）でない場合にライティング計算を行う
     if (gMaterial.enabledLighting != 0 && gMaterial.lightingMode != 0)
@@ -50,6 +54,11 @@ PixelShaderOutput main(VertexShaderOutput input)
     {
         // ライティングなし、または明示的にNoneが選ばれている場合
         output.color = gMaterial.color * textureColor;
+    }
+
+    if (gMaterial.isSelected != 0)
+    {
+        output.color.rgb = saturate(output.color.rgb * 1.35f + 0.12f);
     }
     
     return output;

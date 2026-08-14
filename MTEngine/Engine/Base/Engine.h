@@ -22,7 +22,9 @@
 #include "SwapChain.h"
 #include "MTEngine/Engine/Graphics/DescriptorHeapManager.h"
 #include "MTEngine/Engine/Graphics/PipelineManager.h"
-#include "MTEngine/Game/Scene/GameScene.h" 
+#include "MTEngine/Engine/Editor/Editor.h"
+#include "MTEngine/Game/Scene/GameScene.h"
+#include "MTEngine/Engine/Debug/DebugCamera.h"
 #include "MTEngine/Engine/Debug/ImGuiManager.h"
 #include "MTEngine/Engine/Audio/AudioManager.h"
 #include "MTEngine/Engine/Graphics/Renderer.h"
@@ -102,12 +104,14 @@ namespace MTEngine {
         std::unique_ptr<PipelineManager> pipelineManager_;
         std::unique_ptr<Renderer> renderer_;
         std::unique_ptr<ImGuiManager> imGuiManager_;
+        std::unique_ptr<Editor> editor_;
+        GameScene gameScene_;
+        DebugCamera debugCamera_;
 
         // 4. オーディオ基盤
         std::unique_ptr<AudioManager> audioManager_;
 
         // 5. ゲームシーン
-        std::unique_ptr<GameScene> gameScene_;
     };
 
 }
