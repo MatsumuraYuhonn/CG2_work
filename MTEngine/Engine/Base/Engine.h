@@ -1,43 +1,25 @@
 #pragma once
-#include <Windows.h>
-#include <dxgidebug.h>
-#include <dxcapi.h>
-#include <vector>
-#include <fstream>
-#include <sstream>
-#include <wrl.h>
-#include <memory>
-#include <xaudio2.h>
-#include <cassert>
-#include <chrono>
 
-#include "MTEngine/Engine/Debug/Logger.h"
-#include "Window.h"
-#include "MTEngine/Engine/Math/Vector.h"
-#include "MTEngine/Engine/Input/Input.h"
-#include "MTEngine/Engine/Audio/Sound.h"
-#include "Dx12Device.h"
-#include "MTEngine/Engine/Math/Transform.h"
-#include "CrashHandler.h"
-#include "ShaderCompiler.h"
-#include "SwapChain.h"
-#include "MTEngine/Engine/Graphics/DescriptorHeapManager.h"
-#include "MTEngine/Engine/Graphics/PipelineManager.h"
-#include "MTEngine/Engine/Editor/Editor.h"
-#include "MTEngine/Game/Scene/GameScene.h"
-#include "MTEngine/Game/Scene/SceneManager.h"
+#include <Windows.h>
+#include <d3d12.h>
+#include <dxgidebug.h>
+#include <memory>
+#include <wrl.h>
+
+#include "MTEngine/Engine/Audio/AudioManager.h"
+#include "MTEngine/Engine/Base/CrashHandler.h"
+#include "MTEngine/Engine/Base/Dx12Device.h"
+#include "MTEngine/Engine/Base/ShaderCompiler.h"
+#include "MTEngine/Engine/Base/SwapChain.h"
+#include "MTEngine/Engine/Base/Window.h"
 #include "MTEngine/Engine/Debug/DebugCamera.h"
 #include "MTEngine/Engine/Debug/ImGuiManager.h"
-#include "MTEngine/Engine/Audio/AudioManager.h"
+#include "MTEngine/Engine/Graphics/PipelineManager.h"
 #include "MTEngine/Engine/Graphics/Renderer.h"
-
-
-#include "externals/DirectXTex/DirectXTex.h"
-#include "externals/DirectXTex/d3dx12.h"
+#include "MTEngine/Engine/Input/Input.h"
 
 #pragma comment(lib, "dxcompiler.lib")
 
-// DirectX12のリソースリークをデバッグビルド時に検知するヘルパークラス
 namespace MTEngine {
 
     struct D3DResourceLeakChecker {
@@ -51,88 +33,59 @@ namespace MTEngine {
         }
     };
 
-}
+    // Sprite / TextureManager が共通で利用するアップロードバッファ生成関数。
+    Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(
+        Microsoft::WRL::ComPtr<ID3D12Device> device,
+        size_t sizeInBytes);
 
-// ID3D12Resourceをラップして管理するクラス
-namespace MTEngine {
-
-    class ResourceObject {
-    public:
-        ResourceObject() : resource_(nullptr) {}
-        ResourceObject(std::nullptr_t) : resource_(nullptr) {}
-        ResourceObject(Microsoft::WRL::ComPtr<ID3D12Resource> resource) : resource_(resource) {}
-        ~ResourceObject() {}
-
-        Microsoft::WRL::ComPtr<ID3D12Resource> Get() { return resource_; }
-
-    private:
-        Microsoft::WRL::ComPtr<ID3D12Resource> resource_;
-    };
-
-    // グローバル補助関数
-    Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t sizeInBytes);
-    Microsoft::WRL::ComPtr<ID3D12Resource> CreateDepthStencilTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, int32_t width, int32_t height);
     inline size_t AlignForConstantBuffer(size_t size) {
-        return (size + 255) & ~255; // 256バイトアライメント
+        return (size + 255) & ~255;
     }
 
-    // ゲームエンジンのメインクラス。全システムの初期化・更新・描画を統括する
+    // DirectX 12 の初期化、メインループ、描画フレームを管理する基底クラス。
+    // 新しいゲームではこのクラスを継承し、On... の各関数だけを実装する。
     class Engine {
     public:
         Engine() = default;
-        ~Engine() = default;
+        virtual ~Engine() = default;
 
-        // 基盤ライフサイクル管理
         void Initialize();
         void Run();
         void Finalize();
 
+    protected:
+        virtual void OnInitialize() {}
+        virtual void OnUpdate() {}
+        virtual void OnDraw() {}
+        virtual void OnFinalize() {}
+
+        Input* GetInput() const { return input_.get(); }
+        Renderer* GetRenderer() const { return renderer_.get(); }
+        AudioManager* GetAudioManager() const { return audioManager_.get(); }
+        DebugCamera& GetDebugCamera() { return debugCamera_; }
+        ID3D12Device* GetDevice() const { return dx12Device_.GetDevice().Get(); }
+        ID3D12GraphicsCommandList* GetCommandList() const {
+            return renderer_ ? renderer_->GetCommandList() : nullptr;
+        }
+
     private:
         void Update();
         void Draw();
-        void UpdateAudio();
-        void UpdateBgmCrossfade();
-        void PlayBgm(const std::string& filePath);
-        void PlaySoundEffect(const std::string& filePath, float volume = 1.0f);
 
         HWND hwnd_ = nullptr;
+        bool isInitialized_ = false;
         std::unique_ptr<Input> input_;
 
-        // 1. リークチェック（最上部で定義し、一番最後に解放されるようにする）
+        // 最後に破棄されるよう、DirectX オブジェクトより前に宣言する。
         D3DResourceLeakChecker leakCheck_;
-
-        // 2. Windows / DirectX12 基盤
         Dx12Device dx12Device_;
         SwapChain swapChain_;
-
-        // 3. パイプライン・シェーダ・レンダラー関連
         std::unique_ptr<ShaderCompiler> shaderCompiler_;
         std::unique_ptr<PipelineManager> pipelineManager_;
         std::unique_ptr<Renderer> renderer_;
         std::unique_ptr<ImGuiManager> imGuiManager_;
-        std::unique_ptr<Editor> editor_;
-        GameScene gameScene_;
-        SceneManager sceneManager_;
-        DebugCamera debugCamera_;
-        bool wasPhase1IntroActive_ = false;
-        bool wasPhase2IntroActive_ = false;
-        bool wasEnemyDefeatAnimationActive_ = false;
-        SceneType previousCameraScene_ = SceneType::Title;
-
-        // 4. オーディオ基盤
         std::unique_ptr<AudioManager> audioManager_;
-        std::unique_ptr<Audio> bgmAudio_;
-        std::unique_ptr<Audio> outgoingBgmAudio_;
-        std::unique_ptr<Audio> chargeAudio_;
-        std::vector<std::unique_ptr<Audio>> soundEffects_;
-        std::string currentBgmPath_;
-        float bgmCrossfadeElapsedTime_ = 0.0f;
-        bool isBgmCrossfading_ = false;
-        std::chrono::steady_clock::time_point previousBgmUpdateTime_{};
-        SceneType previousAudioScene_ = SceneType::Title;
-        bool wasNightmareModeEnabled_ = false;
-
-        // 5. ゲームシーン
+        DebugCamera debugCamera_;
     };
 
 }

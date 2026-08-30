@@ -19,7 +19,12 @@ project "DirectXGame"
     files {
         "*.h", "*.cpp",
         "MTEngine/Engine/**.h", "MTEngine/Engine/**.cpp",
-        "MTEngine/Game/**.h", "MTEngine/Game/**.cpp"
+        "MTEngine/Game/main.cpp"
+    }
+
+    removefiles {
+        "MTEngine/Engine/Editor/Editor.h",
+        "MTEngine/Engine/Editor/Editor.cpp"
     }
 
     -- ② 追加のインクルードディレクトリ (C/C++ -> 全般)

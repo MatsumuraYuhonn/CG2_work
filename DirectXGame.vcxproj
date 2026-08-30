@@ -124,7 +124,6 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClInclude Include="MTEngine\Engine\Base\SwapChain.h" />
     <ClInclude Include="MTEngine\Engine\Base\Window.h" />
     <ClInclude Include="MTEngine\Engine\Debug\DebugCamera.h" />
-    <ClInclude Include="MTEngine\Engine\Editor\Editor.h" />
     <ClInclude Include="MTEngine\Engine\Editor\SceneAxis.h" />
     <ClInclude Include="MTEngine\Engine\Debug\ImGuiManager.h" />
     <ClInclude Include="MTEngine\Engine\Debug\Logger.h" />
@@ -141,7 +140,6 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClInclude Include="MTEngine\Engine\Math\Matrix.h" />
     <ClInclude Include="MTEngine\Engine\Math\Transform.h" />
     <ClInclude Include="MTEngine\Engine\Math\Vector.h" />
-    <ClInclude Include="MTEngine\Game\Scene\GameScene.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="externals\imgui\imgui.cpp" />
@@ -161,7 +159,6 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClCompile Include="MTEngine\Engine\Base\SwapChain.cpp" />
     <ClCompile Include="MTEngine\Engine\Base\Window.cpp" />
     <ClCompile Include="MTEngine\Engine\Debug\DebugCamera.cpp" />
-    <ClCompile Include="MTEngine\Engine\Editor\Editor.cpp" />
     <ClCompile Include="MTEngine\Engine\Editor\SceneAxis.cpp" />
     <ClCompile Include="MTEngine\Engine\Debug\ImGuiManager.cpp" />
     <ClCompile Include="MTEngine\Engine\Debug\Logger.cpp" />
@@ -176,7 +173,6 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClCompile Include="MTEngine\Engine\Input\GamePad.cpp" />
     <ClCompile Include="MTEngine\Engine\Input\Input.cpp" />
     <ClCompile Include="MTEngine\Engine\Math\Vector.cpp" />
-    <ClCompile Include="MTEngine\Game\Scene\GameScene.cpp" />
     <ClCompile Include="MTEngine\Game\main.cpp" />
   </ItemGroup>
   <ItemGroup>
