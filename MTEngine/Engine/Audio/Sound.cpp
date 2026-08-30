@@ -1,8 +1,102 @@
 #include "Sound.h"
 #include <cassert>
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
+#include <mfapi.h>
+#include <mferror.h>
+#include <mfidl.h>
+#include <mfreadwrite.h>
+#include <vector>
+#include <wrl.h>
+
+#pragma comment(lib, "mfplat.lib")
+#pragma comment(lib, "mfreadwrite.lib")
+#pragma comment(lib, "mfuuid.lib")
 
 
 namespace MTEngine {
+	namespace {
+		SoundData SoundLoadMediaFoundation(const char* filename) {
+			const int32_t wideLength = MultiByteToWideChar(
+				CP_UTF8, 0, filename, -1, nullptr, 0);
+			assert(wideLength > 0);
+			std::wstring widePath(static_cast<size_t>(wideLength), L'\0');
+			MultiByteToWideChar(
+				CP_UTF8, 0, filename, -1, widePath.data(), wideLength);
+
+			Microsoft::WRL::ComPtr<IMFSourceReader> sourceReader;
+			HRESULT hr = MFCreateSourceReaderFromURL(
+				widePath.c_str(), nullptr, sourceReader.GetAddressOf());
+			assert(SUCCEEDED(hr));
+			if (FAILED(hr)) {
+				return {};
+			}
+
+			Microsoft::WRL::ComPtr<IMFMediaType> requestedType;
+			hr = MFCreateMediaType(requestedType.GetAddressOf());
+			assert(SUCCEEDED(hr));
+			hr = requestedType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
+			assert(SUCCEEDED(hr));
+			hr = requestedType->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM);
+			assert(SUCCEEDED(hr));
+			hr = sourceReader->SetCurrentMediaType(
+				MF_SOURCE_READER_FIRST_AUDIO_STREAM, nullptr, requestedType.Get());
+			assert(SUCCEEDED(hr));
+
+			Microsoft::WRL::ComPtr<IMFMediaType> decodedType;
+			hr = sourceReader->GetCurrentMediaType(
+				MF_SOURCE_READER_FIRST_AUDIO_STREAM, decodedType.GetAddressOf());
+			assert(SUCCEEDED(hr));
+
+			WAVEFORMATEX* decodedFormat = nullptr;
+			UINT32 decodedFormatSize = 0;
+			hr = MFCreateWaveFormatExFromMFMediaType(
+				decodedType.Get(), &decodedFormat, &decodedFormatSize);
+			assert(SUCCEEDED(hr));
+			assert(decodedFormat && decodedFormat->wFormatTag == WAVE_FORMAT_PCM);
+
+			std::vector<BYTE> decodedBytes;
+			while (true) {
+				DWORD streamFlags = 0;
+				Microsoft::WRL::ComPtr<IMFSample> sample;
+				hr = sourceReader->ReadSample(
+					MF_SOURCE_READER_FIRST_AUDIO_STREAM,
+					0,
+					nullptr,
+					&streamFlags,
+					nullptr,
+					sample.GetAddressOf());
+				assert(SUCCEEDED(hr));
+				if (FAILED(hr) || (streamFlags & MF_SOURCE_READERF_ENDOFSTREAM)) {
+					break;
+				}
+				if (!sample) {
+					continue;
+				}
+
+				Microsoft::WRL::ComPtr<IMFMediaBuffer> mediaBuffer;
+				hr = sample->ConvertToContiguousBuffer(mediaBuffer.GetAddressOf());
+				assert(SUCCEEDED(hr));
+				BYTE* sourceBytes = nullptr;
+				DWORD currentLength = 0;
+				hr = mediaBuffer->Lock(&sourceBytes, nullptr, &currentLength);
+				assert(SUCCEEDED(hr));
+				decodedBytes.insert(
+					decodedBytes.end(), sourceBytes, sourceBytes + currentLength);
+				mediaBuffer->Unlock();
+			}
+
+			SoundData soundData{};
+			soundData.wfex = *decodedFormat;
+			soundData.wfex.cbSize = 0;
+			CoTaskMemFree(decodedFormat);
+			soundData.bufferSize = static_cast<unsigned int>(decodedBytes.size());
+			soundData.pBuffer = new BYTE[soundData.bufferSize];
+			std::copy(decodedBytes.begin(), decodedBytes.end(), soundData.pBuffer);
+			return soundData;
+		}
+	}
 
 	SoundData SoundLoadWave(const char* filename) {
 
@@ -69,6 +163,18 @@ namespace MTEngine {
 
 		return soundData;
 
+	}
+
+	SoundData SoundLoad(const char* filename) {
+		std::string extension = std::filesystem::path(filename).extension().string();
+		std::transform(extension.begin(), extension.end(), extension.begin(),
+			[](unsigned char character) {
+				return static_cast<char>(std::tolower(character));
+			});
+		if (extension == ".wav") {
+			return SoundLoadWave(filename);
+		}
+		return SoundLoadMediaFoundation(filename);
 	}
 
 	void SoundUnload(SoundData* soundData) {

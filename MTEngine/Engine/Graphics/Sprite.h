@@ -40,6 +40,10 @@ namespace MTEngine {
         // directionalLightResource: ライティング用定数バッファリソース
         void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, ID3D12Resource* directionalLightResource);
 
+        void SetTextureSrvHandle(D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU) {
+            textureSrvHandleGPU_ = textureSrvHandleGPU;
+        }
+
     public:
         Transform transform{};      // ワールド変換
         Transform uvTransform{};    // UV変換

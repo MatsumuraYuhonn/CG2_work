@@ -22,6 +22,8 @@ namespace MTEngine {
 
         void BeginScene();
         void EndScene();
+        void ClearSceneDepth();
+        void CopySceneToBackBuffer();
 
         // 描画フレームの終了処理（Present・GPU同期・コマンドリストリセット）
         void EndFrame();

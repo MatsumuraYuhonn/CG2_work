@@ -74,10 +74,9 @@ namespace MTEngine {
             }
             else if (identifier == "f") {
 
-                VertexData triangle[3];
-                for (int32_t faceVertex = 0; faceVertex < 3; ++faceVertex) {
-                    std::string vertexDefinition;
-                    s >> vertexDefinition;
+                std::vector<VertexData> faceVertices;
+                std::string vertexDefinition;
+                while (s >> vertexDefinition) {
                     std::istringstream v(vertexDefinition);
                     uint32_t elementIndices[3];
                     for (int32_t element = 0; element < 3; ++element) {
@@ -90,13 +89,17 @@ namespace MTEngine {
                     Vector3 normal = normals[elementIndices[2] - 1];
                     position.x *= -1.0f;
                     normal.x *= -1.0f;
-                    triangle[faceVertex] = { position, texcoord, normal };
+                    faceVertices.push_back({ position, texcoord, normal });
                 }
                 // 現在のマテリアルに対応するメッシュへ、読み込んだ順のまま格納
                 MeshData& mesh = GetOrCreateMesh(currentMaterialName);
-                mesh.vertices.push_back(triangle[2]);
-                mesh.vertices.push_back(triangle[1]);
-                mesh.vertices.push_back(triangle[0]);
+                // Triangulate quads and other polygon faces. Reversing the winding
+                // preserves the existing coordinate-system conversion.
+                for (size_t faceVertex = 1; faceVertex + 1 < faceVertices.size(); ++faceVertex) {
+                    mesh.vertices.push_back(faceVertices[faceVertex + 1]);
+                    mesh.vertices.push_back(faceVertices[faceVertex]);
+                    mesh.vertices.push_back(faceVertices[0]);
+                }
 
             }
             else if (identifier == "mtllib") {
@@ -143,9 +146,37 @@ namespace MTEngine {
             }
             else if (identifier == "map_Kd") {
                 std::string textureFilename;
-                s >> textureFilename;
+                std::getline(s >> std::ws, textureFilename);
                 if (!currentName.empty()) {
-                    materials[currentName].textureFilePath = directoryPath + "/" + textureFilename;
+                    // Blender may export an absolute path from the creator's PC.
+                    // Prefer a texture with the same filename beside the model so
+                    // re-exporting the MTL does not require manual path edits.
+                    // Do this with byte strings because std::filesystem::path can
+                    // throw when an exported path contains characters outside the
+                    // active Windows code page.
+                    const size_t filenameStart = textureFilename.find_last_of("/\\");
+                    const std::string textureBasename = filenameStart == std::string::npos
+                        ? textureFilename
+                        : textureFilename.substr(filenameStart + 1);
+                    const std::string localTexturePath =
+                        directoryPath + "/" + textureBasename;
+                    std::ifstream localTextureFile(localTexturePath, std::ios::binary);
+                    if (localTextureFile.good()) {
+                        materials[currentName].textureFilePath = localTexturePath;
+                    }
+                    else {
+                        const bool isAbsolutePath =
+                            (textureFilename.size() >= 2 && textureFilename[1] == ':') ||
+                            (!textureFilename.empty() &&
+                                (textureFilename[0] == '/' || textureFilename[0] == '\\'));
+                        if (!isAbsolutePath) {
+                            materials[currentName].textureFilePath =
+                                directoryPath + "/" + textureFilename;
+                        }
+                        else {
+                            materials[currentName].textureFilePath = textureFilename;
+                        }
+                    }
                 }
             }
         }
@@ -177,7 +208,7 @@ namespace MTEngine {
 
     void Model::Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, TextureManager* textureManager) {
         for (const auto& mesh : meshResources_) {
-            if (textureManager) {
+            if (textureManager && !mesh.textureFilePath.empty()) {
                 D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = textureManager->GetGPUDescriptorHandle(mesh.textureFilePath);
                 commandList->SetGraphicsRootDescriptorTable(3, srvHandle);
             }

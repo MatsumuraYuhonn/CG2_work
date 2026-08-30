@@ -33,6 +33,9 @@ namespace MTEngine {
 	// WAVファイルをメモリに読み込む
 	SoundData SoundLoadWave(const char* filename);
 
+	// WAV / MP3 を XAudio2 で再生できる PCM として読み込む
+	SoundData SoundLoad(const char* filename);
+
 	// メモリにロードされた音声データを解放する
 	void SoundUnload(SoundData* soundData);
 

@@ -16,8 +16,9 @@ namespace MTEngine {
 
         void Initialize();
         void Finalize();
+        void SetMasterVolume(float volume);
 
-        // Wavファイルのロード（読み込み済みなら既存データを返す）
+        // WAV / MP3 のロード（読み込み済みならスキップ）
         void LoadWave(const std::string& filePath);
 
         // サウンドの再生（Audioインスタンスを生成して返す）
@@ -32,6 +33,7 @@ namespace MTEngine {
     private:
         Microsoft::WRL::ComPtr<IXAudio2> xAudio2_;
         IXAudio2MasteringVoice* masterVoice_ = nullptr;
+        bool isMediaFoundationInitialized_ = false;
 
         // パスをキーにして読み込んだSoundDataを保持
         std::unordered_map<std::string, SoundData> soundDataMap_;

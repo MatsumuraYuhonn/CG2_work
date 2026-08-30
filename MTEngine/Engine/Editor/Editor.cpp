@@ -1,6 +1,7 @@
 #include "Editor.h"
 #include "MTEngine/Engine/Debug/DebugCamera.h"
 #include "MTEngine/Game/Scene/GameScene.h"
+#include "MTEngine/Game/Scene/SceneManager.h"
 
 #include <cstdio>
 
@@ -14,10 +15,12 @@ namespace MTEngine {
     void Editor::Initialize(
         D3D12_GPU_DESCRIPTOR_HANDLE sceneTextureHandle,
         GameScene* gameScene,
-        DebugCamera* debugCamera) {
+        DebugCamera* debugCamera,
+        SceneManager* sceneManager) {
         sceneTextureHandle_ = sceneTextureHandle;
         gameScene_ = gameScene;
         debugCamera_ = debugCamera;
+        sceneManager_ = sceneManager;
     }
 
     void Editor::Update() {
@@ -31,13 +34,16 @@ namespace MTEngine {
 
             ImGuiID centerNode = dockspaceID;
             ImGuiID rightNode = 0;
+            ImGuiID rightBottomNode = 0;
             ImGuiID leftNode = 0;
             ImGuiID bottomNode = 0;
             ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Right, 0.25f, &rightNode, &centerNode);
+            ImGui::DockBuilderSplitNode(rightNode, ImGuiDir_Down, 0.50f, &rightBottomNode, &rightNode);
             ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Left, 0.20f, &leftNode, &centerNode);
             ImGui::DockBuilderSplitNode(centerNode, ImGuiDir_Down, 0.30f, &bottomNode, &centerNode);
             ImGui::DockBuilderDockWindow("Hierarchy", leftNode);
             ImGui::DockBuilderDockWindow("Inspector", rightNode);
+            ImGui::DockBuilderDockWindow("Inspector 2", rightBottomNode);
             ImGui::DockBuilderDockWindow("Console", bottomNode);
             ImGui::DockBuilderDockWindow("Scene", centerNode);
             ImGui::DockBuilderFinish(dockspaceID);
@@ -53,6 +59,7 @@ namespace MTEngine {
             isDebugCameraSelected_ = true;
             isPlayerSelected_ = false;
             selectedTileIndex_ = -1;
+            selectedEnemyIndex_ = -1;
         }
         if (!gameScene_) {
             ImGui::TextDisabled("No map loaded");
@@ -70,6 +77,7 @@ namespace MTEngine {
                         selectedTileIndex_ = static_cast<int32_t>(tileIndex);
                         isDebugCameraSelected_ = false;
                         isPlayerSelected_ = false;
+                        selectedEnemyIndex_ = -1;
                     }
                 }
                 ImGui::TreePop();
@@ -78,12 +86,61 @@ namespace MTEngine {
                 isPlayerSelected_ = true;
                 isDebugCameraSelected_ = false;
                 selectedTileIndex_ = -1;
+                selectedEnemyIndex_ = -1;
+            }
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Middle)) {
+                secondaryInspectorTarget_ = SecondaryInspectorTarget::Player;
+                secondaryEnemyIndex_ = -1;
+            }
+            const std::vector<Vector3>& enemyPositions = gameScene_->GetEnemyPositions();
+            for (size_t enemyIndex = 0; enemyIndex < enemyPositions.size(); ++enemyIndex) {
+                char label[32]{};
+                std::snprintf(label, sizeof(label), "Enemy %zu", enemyIndex + 1);
+                if (ImGui::Selectable(label, selectedEnemyIndex_ == static_cast<int32_t>(enemyIndex))) {
+                    selectedEnemyIndex_ = static_cast<int32_t>(enemyIndex);
+                    isDebugCameraSelected_ = false;
+                    isPlayerSelected_ = false;
+                    selectedTileIndex_ = -1;
+                }
+                if (ImGui::IsItemClicked(ImGuiMouseButton_Middle)) {
+                    secondaryInspectorTarget_ = SecondaryInspectorTarget::Enemy;
+                    secondaryEnemyIndex_ = static_cast<int32_t>(enemyIndex);
+                }
             }
         }
         ImGui::End();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Scene", nullptr, panelFlags | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        if (sceneManager_) {
+            constexpr const char* sceneNames[] = { "Title", "Tutorial", "Game", "Clear", "Miss" };
+            int32_t selectedScene = static_cast<int32_t>(sceneManager_->GetCurrentScene());
+            ImGui::SetNextItemWidth(160.0f);
+            if (ImGui::Combo("Current Scene", &selectedScene, sceneNames, IM_ARRAYSIZE(sceneNames)) && gameScene_) {
+                sceneManager_->ChangeScene(static_cast<SceneType>(selectedScene), *gameScene_);
+            }
+            if (sceneManager_->IsGameScene() && gameScene_) {
+                constexpr const char* phaseNames[] = { "Phase 1", "Phase 2" };
+                int32_t selectedPhase = gameScene_->GetBossPhase() - 1;
+                ImGui::SetNextItemWidth(160.0f);
+                if (ImGui::Combo("Boss Phase", &selectedPhase, phaseNames, IM_ARRAYSIZE(phaseNames))) {
+                    gameScene_->SetBossPhase(selectedPhase + 1);
+                }
+            }
+            ImGui::TextDisabled("%s", sceneManager_->GetTransitionCondition());
+            if (sceneManager_->GetCurrentScene() == SceneType::Tutorial) {
+                ImGui::Spacing();
+                ImGui::Text("Tutorial");
+                ImGui::BulletText("Move: A / D or Left Stick");
+                ImGui::BulletText("Jump: W or GamePad A");
+                ImGui::BulletText("Charge attack: Hold Space or GamePad RT");
+                ImGui::BulletText("Release the button to fire");
+                ImGui::TextColored(
+                    ImVec4(0.95f, 0.80f, 0.25f, 1.0f),
+                    "Press Enter or GamePad Start to begin");
+            }
+            ImGui::Separator();
+        }
         const ImVec2 sceneSize = ImGui::GetContentRegionAvail();
         ImGui::Image(ImTextureRef(static_cast<ImTextureID>(sceneTextureHandle_.ptr)), sceneSize);
         isSceneViewFocused_ = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
@@ -135,6 +192,17 @@ namespace MTEngine {
             float acceleration = gameScene_->GetPlayerMoveAcceleration();
             float damping = gameScene_->GetPlayerVelocityDamping();
             float maxMoveSpeed = gameScene_->GetPlayerMaxMoveSpeed();
+            float jumpSpeed = gameScene_->GetPlayerJumpSpeed();
+            float health = gameScene_->GetPlayerHealth();
+            if (ImGui::SliderFloat(
+                "HP",
+                &health,
+                0.0f,
+                gameScene_->GetPlayerMaxHealth(),
+                "%.0f")) {
+                gameScene_->SetPlayerHealth(health);
+            }
+            ImGui::Separator();
             if (ImGui::SliderFloat("Acceleration", &acceleration, 0.0f, 50.0f, "%.1f")) {
                 gameScene_->SetPlayerMoveAcceleration(acceleration);
             }
@@ -144,9 +212,54 @@ namespace MTEngine {
             if (ImGui::SliderFloat("Max Move Speed", &maxMoveSpeed, 0.0f, 20.0f, "%.1f")) {
                 gameScene_->SetPlayerMaxMoveSpeed(maxMoveSpeed);
             }
+            if (ImGui::SliderFloat("Jump Speed", &jumpSpeed, 0.0f, 30.0f, "%.1f")) {
+                gameScene_->SetPlayerJumpSpeed(jumpSpeed);
+            }
             ImGui::Text("Horizontal Velocity: %.2f", gameScene_->GetPlayerHorizontalVelocity());
             ImGui::Text("Vertical Velocity: %.2f", gameScene_->GetPlayerVerticalVelocity());
             ImGui::Text("Grounded: %s", gameScene_->IsPlayerGrounded() ? "Yes" : "No");
+        }
+        else if (selectedEnemyIndex_ >= 0 && gameScene_) {
+            const std::vector<Vector3>& enemyPositions = gameScene_->GetEnemyPositions();
+            if (selectedEnemyIndex_ < static_cast<int32_t>(enemyPositions.size())) {
+                Vector3 enemyPosition = enemyPositions[static_cast<size_t>(selectedEnemyIndex_)];
+                float enemyHealth = gameScene_->GetEnemyHealth(static_cast<size_t>(selectedEnemyIndex_));
+                ImGui::Text("Enemy %d", selectedEnemyIndex_ + 1);
+                ImGui::Separator();
+                if (ImGui::SliderFloat(
+                    "HP", &enemyHealth, 0.0f, gameScene_->GetEnemyMaxHealth(), "%.0f")) {
+                    gameScene_->SetEnemyHealth(static_cast<size_t>(selectedEnemyIndex_), enemyHealth);
+                }
+                ImGui::Separator();
+                ImGui::Text("World Position");
+                const bool positionChanged =
+                    ImGui::SliderFloat("Position X", &enemyPosition.x, -30.0f, 30.0f, "%.2f") |
+                    ImGui::SliderFloat("Position Y", &enemyPosition.y, -20.0f, 20.0f, "%.2f") |
+                    ImGui::SliderFloat("Position Z", &enemyPosition.z, -5.0f, 5.0f, "%.2f");
+                if (positionChanged) {
+                    gameScene_->SetEnemyPosition(static_cast<size_t>(selectedEnemyIndex_), enemyPosition);
+                }
+                if (gameScene_->GetBossPhase() == 2) {
+                    ImGui::Separator();
+                    ImGui::Text("Boss Attacks");
+                    if (ImGui::Button("Spawn 8-Way Attack")) {
+                        gameScene_->SpawnPhase2AttackEffects();
+                    }
+                    if (ImGui::Button("Spawn Rain Attack")) {
+                        gameScene_->SpawnPhase2RainAttack();
+                    }
+                    if (ImGui::Button("Spawn Fast Spin Attack")) {
+                        gameScene_->SpawnPhase2FastSpinAttack();
+                    }
+                    if (ImGui::Button("Spawn Side Sweep Attack")) {
+                        gameScene_->SpawnPhase2SideSweepAttack();
+                    }
+                }
+            }
+            else {
+                selectedEnemyIndex_ = -1;
+                ImGui::TextDisabled("No enemy selected");
+            }
         }
         else if (!gameScene_) {
             ImGui::TextDisabled("No map loaded");
@@ -172,11 +285,90 @@ namespace MTEngine {
         }
         ImGui::End();
 
+        if (secondaryInspectorTarget_ != SecondaryInspectorTarget::None) {
+            bool isSecondaryInspectorOpen = true;
+            ImGui::Begin("Inspector 2", &isSecondaryInspectorOpen, panelFlags);
+            if (secondaryInspectorTarget_ == SecondaryInspectorTarget::Player && gameScene_) {
+                Vector3 playerPosition = gameScene_->GetPlayerPosition();
+                float health = gameScene_->GetPlayerHealth();
+                ImGui::Text("Player");
+                ImGui::Separator();
+                if (ImGui::SliderFloat(
+                    "HP",
+                    &health,
+                    0.0f,
+                    gameScene_->GetPlayerMaxHealth(),
+                    "%.0f")) {
+                    gameScene_->SetPlayerHealth(health);
+                }
+                ImGui::Text("World Position");
+                const bool positionChanged =
+                    ImGui::SliderFloat("Position X", &playerPosition.x, -30.0f, 30.0f, "%.2f") |
+                    ImGui::SliderFloat("Position Y", &playerPosition.y, -20.0f, 20.0f, "%.2f") |
+                    ImGui::SliderFloat("Position Z", &playerPosition.z, -5.0f, 5.0f, "%.2f");
+                if (positionChanged) {
+                    gameScene_->SetPlayerPosition(playerPosition);
+                }
+                ImGui::Separator();
+                ImGui::Text("Horizontal Velocity: %.2f", gameScene_->GetPlayerHorizontalVelocity());
+                ImGui::Text("Vertical Velocity: %.2f", gameScene_->GetPlayerVerticalVelocity());
+                ImGui::Text("Grounded: %s", gameScene_->IsPlayerGrounded() ? "Yes" : "No");
+            }
+            else if (secondaryInspectorTarget_ == SecondaryInspectorTarget::Enemy && gameScene_) {
+                const std::vector<Vector3>& enemyPositions = gameScene_->GetEnemyPositions();
+                if (secondaryEnemyIndex_ >= 0 &&
+                    secondaryEnemyIndex_ < static_cast<int32_t>(enemyPositions.size())) {
+                    Vector3 enemyPosition = enemyPositions[static_cast<size_t>(secondaryEnemyIndex_)];
+                    float enemyHealth = gameScene_->GetEnemyHealth(static_cast<size_t>(secondaryEnemyIndex_));
+                    ImGui::Text("Enemy %d", secondaryEnemyIndex_ + 1);
+                    ImGui::Separator();
+                    if (ImGui::SliderFloat(
+                        "HP", &enemyHealth, 0.0f, gameScene_->GetEnemyMaxHealth(), "%.0f")) {
+                        gameScene_->SetEnemyHealth(static_cast<size_t>(secondaryEnemyIndex_), enemyHealth);
+                    }
+                    ImGui::Text("World Position");
+                    const bool positionChanged =
+                        ImGui::SliderFloat("Position X", &enemyPosition.x, -30.0f, 30.0f, "%.2f") |
+                        ImGui::SliderFloat("Position Y", &enemyPosition.y, -20.0f, 20.0f, "%.2f") |
+                        ImGui::SliderFloat("Position Z", &enemyPosition.z, -5.0f, 5.0f, "%.2f");
+                    if (positionChanged) {
+                        gameScene_->SetEnemyPosition(static_cast<size_t>(secondaryEnemyIndex_), enemyPosition);
+                    }
+                }
+                else {
+                    ImGui::TextDisabled("Enemy is not available");
+                }
+            }
+            ImGui::End();
+            if (!isSecondaryInspectorOpen) {
+                secondaryInspectorTarget_ = SecondaryInspectorTarget::None;
+                secondaryEnemyIndex_ = -1;
+            }
+        }
+
         ImGui::Begin("Console", nullptr, panelFlags);
         ImGui::TextColored(ImVec4(0.38f, 0.78f, 0.52f, 1.0f), "Editor ready");
         ImGui::SameLine();
         ImGui::TextDisabled("| %.1f FPS", ImGui::GetIO().Framerate);
         ImGui::Separator();
+        if (sceneManager_) {
+            ImGui::Text("Current Scene: %s", sceneManager_->GetCurrentSceneName());
+            ImGui::Text("Game Time: %.2f sec", sceneManager_->GetElapsedGameTimeSeconds());
+            ImGui::TextDisabled("Transition: %s", sceneManager_->GetTransitionCondition());
+            ImGui::Separator();
+        }
+        if (gameScene_) {
+            ImGui::Text("Player Ammo: %d / 10", gameScene_->GetRemainingProjectileCount());
+            bool isOrientationMarkerVisible =
+                gameScene_->IsOrientationMarkerVisible();
+            if (ImGui::Checkbox(
+                "Show Axis Marker",
+                &isOrientationMarkerVisible)) {
+                gameScene_->SetOrientationMarkerVisible(
+                    isOrientationMarkerVisible);
+            }
+            ImGui::Separator();
+        }
         ImGui::TextColored(ImVec4(0.95f, 0.15f, 0.15f, 1.0f), "+X: Red");
         ImGui::SameLine();
         ImGui::TextColored(ImVec4(0.15f, 0.95f, 0.25f, 1.0f), "+Y: Green");

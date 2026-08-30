@@ -209,6 +209,44 @@ namespace MTEngine {
         commandList->OMSetRenderTargets(1, &rtvHandles_[backBufferIndex], false, &backBufferDsvHandle);
     }
 
+    void Renderer::ClearSceneDepth() {
+        auto commandList = dx12Device_->GetCommandList();
+        const D3D12_CPU_DESCRIPTOR_HANDLE sceneDsvHandle =
+            dsvHeapManager_.GetCPUDescriptorHandle(1);
+        commandList->ClearDepthStencilView(
+            sceneDsvHandle,
+            D3D12_CLEAR_FLAG_DEPTH,
+            1.0f,
+            0,
+            0,
+            nullptr);
+    }
+
+    void Renderer::CopySceneToBackBuffer() {
+        auto commandList = dx12Device_->GetCommandList();
+        const UINT backBufferIndex = swapChain_->GetCurrentBackBufferIndex();
+        ID3D12Resource* backBuffer = swapChain_->GetBuffer(backBufferIndex).Get();
+
+        D3D12_RESOURCE_BARRIER barriers[2]{};
+        barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barriers[0].Transition.pResource = sceneRenderTargetResource_.Get();
+        barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+        barriers[0].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barriers[1].Transition.pResource = backBuffer;
+        barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+        barriers[1].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        commandList->ResourceBarrier(2, barriers);
+
+        commandList->CopyResource(backBuffer, sceneRenderTargetResource_.Get());
+
+        std::swap(barriers[0].Transition.StateBefore, barriers[0].Transition.StateAfter);
+        std::swap(barriers[1].Transition.StateBefore, barriers[1].Transition.StateAfter);
+        commandList->ResourceBarrier(2, barriers);
+    }
+
     void Renderer::EndFrame() {
         auto commandList = dx12Device_->GetCommandList();
         auto commandAllocator = dx12Device_->GetCommandAllocator();

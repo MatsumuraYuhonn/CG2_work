@@ -41,6 +41,7 @@ namespace MTEngine {
         StickState rightStick{};
         float leftTrigger = 0.0f;  // 0.0f 〜 1.0f
         float rightTrigger = 0.0f; // 0.0f 〜 1.0f
+        float preRightTrigger = 0.0f;
     };
 
     class GamePad {
@@ -75,6 +76,12 @@ namespace MTEngine {
         float GetLeftTrigger(int index = 0) const;
         // 右トリガーの入力値取得（0.0f〜1.0f）
         float GetRightTrigger(int index = 0) const;
+        // 右トリガーが押されているか
+        bool PushRightTrigger(int index = 0) const;
+        // 右トリガーが押された瞬間か
+        bool TriggerRightTrigger(int index = 0) const;
+        // 右トリガーが離された瞬間か
+        bool ExitRightTrigger(int index = 0) const;
 
         // 振動（バイブレーション）の設定。0.0f〜1.0fで指定
         void SetVibration(float leftMotor, float rightMotor, int index = 0);
@@ -86,6 +93,7 @@ namespace MTEngine {
         static float NormalizeTrigger(BYTE value, BYTE deadZone);
 
         GamePadState state_{};
+        DWORD activeUserIndex_ = XUSER_MAX_COUNT;
     };
 
 }

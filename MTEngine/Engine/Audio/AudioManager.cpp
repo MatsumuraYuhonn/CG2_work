@@ -1,6 +1,7 @@
 // AudioManager.cpp
 #include "AudioManager.h"
 #include <cassert>
+#include <mfapi.h>
 
 namespace MTEngine {
 
@@ -9,10 +10,23 @@ namespace MTEngine {
     }
 
     void AudioManager::Initialize() {
-        HRESULT hr = XAudio2Create(xAudio2_.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
+        HRESULT hr = MFStartup(MF_VERSION);
+        assert(SUCCEEDED(hr));
+        isMediaFoundationInitialized_ = SUCCEEDED(hr);
+
+        hr = XAudio2Create(xAudio2_.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
         assert(SUCCEEDED(hr));
 
-        hr = xAudio2_->CreateMasteringVoice(&masterVoice_);
+        // Use the normal Windows audio endpoint instead of XAudio2's virtual
+        // endpoint so the game follows the PC master volume and per-app mixer.
+        hr = xAudio2_->CreateMasteringVoice(
+            &masterVoice_,
+            XAUDIO2_DEFAULT_CHANNELS,
+            XAUDIO2_DEFAULT_SAMPLERATE,
+            XAUDIO2_NO_VIRTUAL_AUDIO_CLIENT,
+            nullptr,
+            nullptr,
+            AudioCategory_GameEffects);
         assert(SUCCEEDED(hr));
     }
 
@@ -25,6 +39,20 @@ namespace MTEngine {
         }
 
         xAudio2_.Reset();
+
+        if (isMediaFoundationInitialized_) {
+            MFShutdown();
+            isMediaFoundationInitialized_ = false;
+        }
+    }
+
+    void AudioManager::SetMasterVolume(float volume) {
+        if (!masterVoice_) {
+            return;
+        }
+        volume = volume < 0.0f ? 0.0f : (volume > 1.0f ? 1.0f : volume);
+        const HRESULT hr = masterVoice_->SetVolume(volume);
+        assert(SUCCEEDED(hr));
     }
 
     void AudioManager::LoadWave(const std::string& filePath) {
@@ -34,7 +62,7 @@ namespace MTEngine {
         }
 
         // 読み込んでマップに格納
-        SoundData soundData = SoundLoadWave(filePath.c_str());
+        SoundData soundData = SoundLoad(filePath.c_str());
         soundDataMap_[filePath] = soundData;
     }
 

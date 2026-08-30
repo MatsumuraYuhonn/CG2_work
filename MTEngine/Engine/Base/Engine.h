@@ -9,6 +9,7 @@
 #include <memory>
 #include <xaudio2.h>
 #include <cassert>
+#include <chrono>
 
 #include "MTEngine/Engine/Debug/Logger.h"
 #include "Window.h"
@@ -24,6 +25,7 @@
 #include "MTEngine/Engine/Graphics/PipelineManager.h"
 #include "MTEngine/Engine/Editor/Editor.h"
 #include "MTEngine/Game/Scene/GameScene.h"
+#include "MTEngine/Game/Scene/SceneManager.h"
 #include "MTEngine/Engine/Debug/DebugCamera.h"
 #include "MTEngine/Engine/Debug/ImGuiManager.h"
 #include "MTEngine/Engine/Audio/AudioManager.h"
@@ -88,6 +90,10 @@ namespace MTEngine {
     private:
         void Update();
         void Draw();
+        void UpdateAudio();
+        void UpdateBgmCrossfade();
+        void PlayBgm(const std::string& filePath);
+        void PlaySoundEffect(const std::string& filePath, float volume = 1.0f);
 
         HWND hwnd_ = nullptr;
         std::unique_ptr<Input> input_;
@@ -106,10 +112,25 @@ namespace MTEngine {
         std::unique_ptr<ImGuiManager> imGuiManager_;
         std::unique_ptr<Editor> editor_;
         GameScene gameScene_;
+        SceneManager sceneManager_;
         DebugCamera debugCamera_;
+        bool wasPhase1IntroActive_ = false;
+        bool wasPhase2IntroActive_ = false;
+        bool wasEnemyDefeatAnimationActive_ = false;
+        SceneType previousCameraScene_ = SceneType::Title;
 
         // 4. オーディオ基盤
         std::unique_ptr<AudioManager> audioManager_;
+        std::unique_ptr<Audio> bgmAudio_;
+        std::unique_ptr<Audio> outgoingBgmAudio_;
+        std::unique_ptr<Audio> chargeAudio_;
+        std::vector<std::unique_ptr<Audio>> soundEffects_;
+        std::string currentBgmPath_;
+        float bgmCrossfadeElapsedTime_ = 0.0f;
+        bool isBgmCrossfading_ = false;
+        std::chrono::steady_clock::time_point previousBgmUpdateTime_{};
+        SceneType previousAudioScene_ = SceneType::Title;
+        bool wasNightmareModeEnabled_ = false;
 
         // 5. ゲームシーン
     };
