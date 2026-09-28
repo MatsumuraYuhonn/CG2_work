@@ -124,6 +124,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClInclude Include="MTEngine\Engine\Base\SwapChain.h" />
     <ClInclude Include="MTEngine\Engine\Base\Window.h" />
     <ClInclude Include="MTEngine\Engine\Debug\DebugCamera.h" />
+    <ClInclude Include="MTEngine\Engine\Editor\BaseEditor.h" />
     <ClInclude Include="MTEngine\Engine\Editor\SceneAxis.h" />
     <ClInclude Include="MTEngine\Engine\Debug\ImGuiManager.h" />
     <ClInclude Include="MTEngine\Engine\Debug\Logger.h" />
@@ -159,6 +160,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClCompile Include="MTEngine\Engine\Base\SwapChain.cpp" />
     <ClCompile Include="MTEngine\Engine\Base\Window.cpp" />
     <ClCompile Include="MTEngine\Engine\Debug\DebugCamera.cpp" />
+    <ClCompile Include="MTEngine\Engine\Editor\BaseEditor.cpp" />
     <ClCompile Include="MTEngine\Engine\Editor\SceneAxis.cpp" />
     <ClCompile Include="MTEngine\Engine\Debug\ImGuiManager.cpp" />
     <ClCompile Include="MTEngine\Engine\Debug\Logger.cpp" />

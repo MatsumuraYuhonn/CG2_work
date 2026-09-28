@@ -14,6 +14,7 @@
 #include "MTEngine/Engine/Base/Window.h"
 #include "MTEngine/Engine/Debug/DebugCamera.h"
 #include "MTEngine/Engine/Debug/ImGuiManager.h"
+#include "MTEngine/Engine/Editor/BaseEditor.h"
 #include "MTEngine/Engine/Graphics/PipelineManager.h"
 #include "MTEngine/Engine/Graphics/Renderer.h"
 #include "MTEngine/Engine/Input/Input.h"
@@ -84,6 +85,7 @@ namespace MTEngine {
         std::unique_ptr<PipelineManager> pipelineManager_;
         std::unique_ptr<Renderer> renderer_;
         std::unique_ptr<ImGuiManager> imGuiManager_;
+        std::unique_ptr<BaseEditor> editor_;
         std::unique_ptr<AudioManager> audioManager_;
         DebugCamera debugCamera_;
     };

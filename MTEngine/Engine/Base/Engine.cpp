@@ -145,7 +145,16 @@ namespace MTEngine {
         assert(isSwapChainInitialized);
 
         shaderCompiler_ = std::make_unique<ShaderCompiler>();
-        assert(shaderCompiler_->Initialize());
+        const bool isShaderCompilerInitialized = shaderCompiler_->Initialize();
+        assert(isShaderCompilerInitialized);
+        if (!isShaderCompilerInitialized) {
+            MessageBoxW(
+                hwnd_,
+                L"シェーダーコンパイラーの初期化に失敗しました。",
+                L"MTEngine - Shader Compiler Error",
+                MB_OK | MB_ICONERROR);
+            ExitProcess(EXIT_FAILURE);
+        }
 
         pipelineManager_ = std::make_unique<PipelineManager>();
         pipelineManager_->Initialize(device, shaderCompiler_.get());
@@ -172,6 +181,10 @@ namespace MTEngine {
             renderer_->GetSrvHeapManager()->GetGPUDescriptorHandle(0));
 
         debugCamera_.Initialize();
+        editor_ = std::make_unique<BaseEditor>();
+        editor_->Initialize(
+            renderer_->GetSceneTextureHandle(),
+            &debugCamera_);
         isInitialized_ = true;
         OnInitialize();
     }
@@ -193,8 +206,13 @@ namespace MTEngine {
     void Engine::Update() {
         input_->Update();
         imGuiManager_->BeginFrame();
+        editor_->Update();
         OnUpdate();
+#ifdef USE_IMGUI
+        debugCamera_.Update(input_.get(), editor_->IsSceneViewFocused());
+#else
         debugCamera_.Update(input_.get(), true);
+#endif
         imGuiManager_->EndFrame();
     }
 
@@ -219,6 +237,7 @@ namespace MTEngine {
         }
 
         OnFinalize();
+        editor_.reset();
         audioManager_->Finalize();
         audioManager_.reset();
 

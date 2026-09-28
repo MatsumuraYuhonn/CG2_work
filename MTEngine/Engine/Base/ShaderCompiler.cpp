@@ -16,13 +16,22 @@ namespace MTEngine {
 
     bool ShaderCompiler::Initialize() {
         HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils_));
-        assert(SUCCEEDED(hr));
+        if (FAILED(hr)) {
+            return false;
+        }
 
         hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler_));
-        assert(SUCCEEDED(hr));
+        if (FAILED(hr)) {
+            dxcUtils_.Reset();
+            return false;
+        }
 
         hr = dxcUtils_->CreateDefaultIncludeHandler(&includeHandler_);
-        assert(SUCCEEDED(hr));
+        if (FAILED(hr)) {
+            dxcCompiler_.Reset();
+            dxcUtils_.Reset();
+            return false;
+        }
 
         return true;
     }

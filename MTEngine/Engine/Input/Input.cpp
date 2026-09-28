@@ -8,6 +8,7 @@
 namespace MTEngine {
 
     Input::~Input() {
+
         if (keyboard_) {
             keyboard_->Unacquire();
         }

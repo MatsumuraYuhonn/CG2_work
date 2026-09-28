@@ -63,6 +63,9 @@
     <ClInclude Include="MTEngine\Engine\Debug\DebugCamera.h">
       <Filter>Engine\Debug</Filter>
     </ClInclude>
+    <ClInclude Include="MTEngine\Engine\Editor\BaseEditor.h">
+      <Filter>Engine\Editor</Filter>
+    </ClInclude>
     <ClInclude Include="MTEngine\Engine\Editor\SceneAxis.h">
       <Filter>Engine\Editor</Filter>
     </ClInclude>
@@ -166,6 +169,9 @@
     </ClCompile>
     <ClCompile Include="MTEngine\Engine\Debug\DebugCamera.cpp">
       <Filter>Engine\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Editor\BaseEditor.cpp">
+      <Filter>Engine\Editor</Filter>
     </ClCompile>
     <ClCompile Include="MTEngine\Engine\Editor\SceneAxis.cpp">
       <Filter>Engine\Editor</Filter>
