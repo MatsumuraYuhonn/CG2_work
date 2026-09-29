@@ -7,6 +7,16 @@
 // グラフィックスパイプラインステート(PSO)およびルートシグネチャの生成・管理を行うクラス
 namespace MTEngine {
 
+    enum class BlendMode {
+        kBlendModeNone,
+        kBlendModeNormal,
+        kBlendModeAdd,
+        kBlendModeSubtract,
+        kBlendModeMultily,
+        kBlendModeScreen,
+        kCountOfBlendMode
+    };
+
     class PipelineManager {
     public:
         PipelineManager() = default;
