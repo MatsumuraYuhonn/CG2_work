@@ -199,31 +199,106 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClCompile Include="externals\imgui\imgui_impl_win32.cpp" />
     <ClCompile Include="externals\imgui\imgui_tables.cpp" />
     <ClCompile Include="externals\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="MTEngine\Engine\Audio\Audio.cpp" />
-    <ClCompile Include="MTEngine\Engine\Audio\AudioManager.cpp" />
-    <ClCompile Include="MTEngine\Engine\Audio\Sound.cpp" />
-    <ClCompile Include="MTEngine\Engine\Base\CrashHandler.cpp" />
-    <ClCompile Include="MTEngine\Engine\Base\Dx12Device.cpp" />
-    <ClCompile Include="MTEngine\Engine\Base\Engine.cpp" />
-    <ClCompile Include="MTEngine\Engine\Base\ShaderCompiler.cpp" />
-    <ClCompile Include="MTEngine\Engine\Base\SwapChain.cpp" />
-    <ClCompile Include="MTEngine\Engine\Base\Window.cpp" />
-    <ClCompile Include="MTEngine\Engine\Debug\DebugCamera.cpp" />
-    <ClCompile Include="MTEngine\Engine\Editor\BaseEditor.cpp" />
-    <ClCompile Include="MTEngine\Engine\Editor\SceneAxis.cpp" />
-    <ClCompile Include="MTEngine\Engine\Debug\ImGuiManager.cpp" />
-    <ClCompile Include="MTEngine\Engine\Debug\Logger.cpp" />
-    <ClCompile Include="MTEngine\Engine\Graphics\ConstantBuffer.cpp" />
-    <ClCompile Include="MTEngine\Engine\Graphics\DescriptorHeapManager.cpp" />
-    <ClCompile Include="MTEngine\Engine\Graphics\GraphicsManager.cpp" />
-    <ClCompile Include="MTEngine\Engine\Graphics\Model.cpp" />
-    <ClCompile Include="MTEngine\Engine\Graphics\PipelineManager.cpp" />
-    <ClCompile Include="MTEngine\Engine\Graphics\Renderer.cpp" />
-    <ClCompile Include="MTEngine\Engine\Graphics\Sprite.cpp" />
-    <ClCompile Include="MTEngine\Engine\Graphics\TextureManager.cpp" />
-    <ClCompile Include="MTEngine\Engine\Input\GamePad.cpp" />
-    <ClCompile Include="MTEngine\Engine\Input\Input.cpp" />
-    <ClCompile Include="MTEngine\Engine\Math\Vector.cpp" />
+    <ClCompile Include="MTEngine\Engine\Audio\Audio.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Audio\AudioManager.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Audio\Sound.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Base\CrashHandler.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Base\Dx12Device.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Base\Engine.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Base\ShaderCompiler.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Base\SwapChain.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Base\Window.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Debug\DebugCamera.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Editor\BaseEditor.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Editor\SceneAxis.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Debug\ImGuiManager.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Debug\Logger.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Graphics\ConstantBuffer.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Graphics\DescriptorHeapManager.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Graphics\GraphicsManager.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Graphics\Model.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Graphics\PipelineManager.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Graphics\Renderer.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Graphics\Sprite.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Graphics\TextureManager.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Input\GamePad.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Input\Input.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Math\Vector.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
+    </ClCompile>
     <ClCompile Include="MTEngine\Game\main.cpp" />
   </ItemGroup>
   <ItemGroup>
