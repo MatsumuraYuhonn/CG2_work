@@ -2,6 +2,8 @@
 
 #include "MTEngine/Engine/Debug/DebugCamera.h"
 
+#include <utility>
+
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_internal.h"
@@ -14,6 +16,12 @@ namespace MTEngine {
         DebugCamera* debugCamera) {
         sceneTextureHandle_ = sceneTextureHandle;
         debugCamera_ = debugCamera;
+    }
+
+    void BaseEditor::RegisterGameObject(
+        const std::string& name,
+        std::function<void()> drawInspector) {
+        gameObjects_.push_back({ name, std::move(drawInspector) });
     }
 
     void BaseEditor::Update() {
@@ -52,13 +60,22 @@ namespace MTEngine {
         if (ImGui::TreeNodeEx(
             "MTEngine",
             ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            if (ImGui::Selectable("Debug Camera", isDebugCameraSelected_)) {
-                isDebugCameraSelected_ = true;
+            if (ImGui::Selectable("Debug Camera", selectedObjectIndex_ == 0)) {
+                selectedObjectIndex_ = 0;
             }
             ImGui::TreePop();
         }
         ImGui::Spacing();
-        ImGui::TextDisabled("Game objects can be added here later.");
+        ImGui::TextDisabled("Game Objects");
+        ImGui::Separator();
+        for (size_t index = 0; index < gameObjects_.size(); ++index) {
+            const size_t selectionIndex = index + 1;
+            if (ImGui::Selectable(
+                gameObjects_[index].name.c_str(),
+                selectedObjectIndex_ == selectionIndex)) {
+                selectedObjectIndex_ = selectionIndex;
+            }
+        }
         ImGui::End();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -80,7 +97,7 @@ namespace MTEngine {
         ImGui::PopStyleVar();
 
         ImGui::Begin("Inspector", nullptr, panelFlags);
-        if (isDebugCameraSelected_ && debugCamera_) {
+        if (selectedObjectIndex_ == 0 && debugCamera_) {
             Vector3 position = debugCamera_->GetPosition();
             Vector3 target = debugCamera_->GetTarget();
             float distance = debugCamera_->GetDistance();
@@ -107,6 +124,15 @@ namespace MTEngine {
             }
             if (ImGui::SliderAngle("Pitch", &pitch, -89.0f, 89.0f)) {
                 debugCamera_->SetPitch(pitch);
+            }
+        } else if (selectedObjectIndex_ > 0 &&
+            selectedObjectIndex_ <= gameObjects_.size()) {
+            GameObjectEntry& selectedObject =
+                gameObjects_[selectedObjectIndex_ - 1];
+            ImGui::Text("%s", selectedObject.name.c_str());
+            ImGui::Separator();
+            if (selectedObject.drawInspector) {
+                selectedObject.drawInspector();
             }
         } else {
             ImGui::TextDisabled("No object selected");

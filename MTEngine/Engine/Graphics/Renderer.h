@@ -28,6 +28,9 @@ namespace MTEngine {
         // 描画フレームの終了処理（Present・GPU同期・コマンドリストリセット）
         void EndFrame();
 
+		// ブレンドモードの設定
+        void SetBlendMode(BlendMode blendMode);
+
         // 各種ゲッター
         ID3D12GraphicsCommandList* GetCommandList() const { return dx12Device_->GetCommandList().Get(); }
         DescriptorHeapManager* GetSrvHeapManager() { return &srvHeapManager_; }

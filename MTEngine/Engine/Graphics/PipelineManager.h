@@ -2,6 +2,8 @@
 #include <d3d12.h>
 #include <wrl.h>
 #include <memory>
+#include <array>
+#include <cassert>
 #include "MTEngine/Engine/Base/ShaderCompiler.h"
 
 // グラフィックスパイプラインステート(PSO)およびルートシグネチャの生成・管理を行うクラス
@@ -12,7 +14,7 @@ namespace MTEngine {
         kBlendModeNormal,
         kBlendModeAdd,
         kBlendModeSubtract,
-        kBlendModeMultily,
+        kBlendModeMultiply,
         kBlendModeScreen,
         kCountOfBlendMode
     };
@@ -29,17 +31,27 @@ namespace MTEngine {
 
         // コマンドリストにパイプライン状態をバインドする
         // commandList: 使用するグラフィックスコマンドリスト
-        void Bind(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
+        void Bind(ID3D12GraphicsCommandList* commandList, BlendMode blendMode);
 
         // ルートシグネチャを取得
         ID3D12RootSignature* GetRootSignature() const { return rootSignature_.Get(); }
 
         // PSOを取得
-        ID3D12PipelineState* GetPipelineState() const { return graphicsPipelineState_.Get(); }
+        ID3D12PipelineState* GetPipelineState(BlendMode blendMode) const {
+
+            const size_t index = static_cast<size_t>(blendMode);
+
+            return  graphicsPipelineStates_[index].Get();
+
+        }
 
     private:
+        static constexpr size_t kBlendModeCount = static_cast<size_t>(BlendMode::kCountOfBlendMode);
+
         Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature_ = nullptr;
-        Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState_ = nullptr;
+       
+		std::array<Microsoft::WRL::ComPtr<ID3D12PipelineState>, kBlendModeCount> graphicsPipelineStates_ = {};
+       
     };
 
 }

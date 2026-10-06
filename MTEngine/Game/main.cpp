@@ -94,29 +94,24 @@ namespace {
             // Planeが見やすい位置にカメラを置く
             GetDebugCamera().SetTarget({ 0.0f, 0.0f, 0.0f });
             GetDebugCamera().SetDistance(8.0f);
+
+            // PlaneをHierarchyへ追加し、選択時のInspectorを登録する。
+            GetEditor()->RegisterGameObject(
+                "Plane",
+                [this]() { DrawPlaneInspector(); });
         }
 
         void OnUpdate() override {
-#ifdef USE_IMGUI
-            ImGui::Begin("Plane Settings");
-            ImGui::SliderFloat(
-                "Light Intensity",
-                &lightIntensity_,
-                0.0f,
-                5.0f,
-                "%.2f");
-            ImGui::ColorEdit4("Material Color", &materialColor_.x);
-            ImGui::TextDisabled("Material Color A controls transparency.");
-            ImGui::End();
-#endif
-
-            // ImGuiで変更した値をそのフレームでGPU側へ反映する
+            // Inspectorで変更した値をそのフレームでGPU側へ反映する。
             materialBuffer_->color = materialColor_;
             lightBuffer_->intensity = lightIntensity_;
         }
 
         void OnDraw() override {
             ID3D12GraphicsCommandList* commandList = GetCommandList();
+
+            // Planeに設定されたブレンドモードのPSOへ切り替える。
+            GetRenderer()->SetBlendMode(blendMode_);
 
             // World × View × Projection
             const MTEngine::Matrix4x4 viewProjection =
@@ -154,6 +149,37 @@ namespace {
         }
 
     private:
+        void DrawPlaneInspector() {
+#ifdef USE_IMGUI
+            ImGui::SliderFloat(
+                "Light Intensity",
+                &lightIntensity_,
+                0.0f,
+                5.0f,
+                "%.2f");
+            ImGui::ColorEdit4("Material Color", &materialColor_.x);
+            ImGui::TextDisabled("Material Color A controls transparency.");
+
+            constexpr const char* blendModeNames[] = {
+                "None",
+                "Normal",
+                "Add",
+                "Subtract",
+                "Multiply",
+                "Screen"
+            };
+            int selectedBlendMode = static_cast<int>(blendMode_);
+            if (ImGui::Combo(
+                "Blend Mode",
+                &selectedBlendMode,
+                blendModeNames,
+                IM_ARRAYSIZE(blendModeNames))) {
+                blendMode_ =
+                    static_cast<MTEngine::BlendMode>(selectedBlendMode);
+            }
+#endif
+        }
+
         MTEngine::Model planeModel_;
         MTEngine::TextureManager textureManager_;
 
@@ -163,6 +189,8 @@ namespace {
 
         MTEngine::Vector4 materialColor_ = { 1.0f, 1.0f, 1.0f, 1.0f };
         float lightIntensity_ = 1.0f;
+        MTEngine::BlendMode blendMode_ =
+            MTEngine::BlendMode::kBlendModeNormal;
 
         MTEngine::Matrix4x4 planeWorldMatrix_ =
             MTEngine::MakeIdentityMatrix();

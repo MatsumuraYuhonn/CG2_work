@@ -62,6 +62,7 @@ namespace MTEngine {
 
         Input* GetInput() const { return input_.get(); }
         Renderer* GetRenderer() const { return renderer_.get(); }
+        BaseEditor* GetEditor() const { return editor_.get(); }
         AudioManager* GetAudioManager() const { return audioManager_.get(); }
         DebugCamera& GetDebugCamera() { return debugCamera_; }
         ID3D12Device* GetDevice() const { return dx12Device_.GetDevice().Get(); }
