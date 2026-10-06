@@ -30,6 +30,12 @@ PixelShaderOutput main(VertexShaderOutput input)
     if (gMaterial.useTexture != 0)
     {
         textureColor = gTexture.Sample(gSampler, input.texcoord);
+        
+        if (textureColor.a <= 0.0)
+        {
+            discard;
+        }
+        
     }
 
     // ライティングが有効、かつモードがNone（0）でない場合にライティング計算を行う
