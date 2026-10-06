@@ -37,6 +37,9 @@
     <Filter Include="Assets\Shaders">
       <UniqueIdentifier>{c4187777-6b00-4f50-8bea-0ebaf3908d59}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Scene">
+      <UniqueIdentifier>{fd4372b0-172e-4d7c-867b-0261536aa784}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MTEngine\Engine\Audio\Sound.h">
@@ -143,6 +146,9 @@
     </ClInclude>
     <ClInclude Include="MTEngine\Engine\Input\GamePad.h">
       <Filter>Engine\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneObject.h">
+      <Filter>Engine\Scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
