@@ -159,6 +159,9 @@
     <ClInclude Include="MTEngine\Engine\Scene\SceneObject.h">
       <Filter>Engine\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="MTEngine\Engine\Scene\Scene.h">
+      <Filter>Engine\Scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MTEngine\Engine\Audio\Sound.cpp">
@@ -261,6 +264,9 @@
       <Filter>Engine\Input</Filter>
     </ClCompile>
     <ClCompile Include="MTEngine\Engine\Scene\SceneSerializer.cpp">
+      <Filter>Engine\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Scene\Scene.cpp">
       <Filter>Engine\Scene</Filter>
     </ClCompile>
   </ItemGroup>

@@ -3,166 +3,171 @@
 #include <filesystem>
 #include <fstream>
 #include <system_error>
+#include <utility>
 
 #include "MTEngine/Engine/externals/json.hpp"
 
 namespace MTEngine {
 
-	using json = nlohmann::json;
+    using json = nlohmann::json;
 
-	bool SceneSerializer::Save(const std::string& filePath, const SceneObject& object) {
+    bool SceneSerializer::Save(const std::string& filePath, const Scene& scene) {
 
-		json root;
+        json root;
 
-		root["objects"] = json::array();
+        root["objects"] = json::array();
 
-		const Transform& transform = object.transform;
+        for (const SceneObject& object : scene.GetObjects()) {
+            const Transform& transform = object.transform;
 
-		root["objects"].push_back({
-			{"id", object.id},
-			{"name", object.name},
-			{"modelPath", object.modelPath },
+            root["objects"].push_back({
+                {"id", object.id},
+                {"name", object.name},
+                {"modelPath", object.modelPath },
 
-			{
-				"transform",
-				{
+                {
+                    "transform",
+                    {
 
-					{
-						"position",
-						{
-							transform.translate.x,
-							transform.translate.y,
-							transform.translate.z
-						}
-					},
+                        {
+                            "position",
+                            {
+                                transform.translate.x,
+                                transform.translate.y,
+                                transform.translate.z
+                            }
+                        },
 
-					{
-						"rotation",
-						{
-							transform.rotate.x,
-							transform.rotate.y,
-							transform.rotate.z
+                        {
+                            "rotation",
+                            {
+                                transform.rotate.x,
+                                transform.rotate.y,
+                                transform.rotate.z
 
-						}
+                            }
 
-					},
+                        },
 
-					{
-						"scale",
-						{
-							transform.scale.x,
-							transform.scale.y,
-							transform.scale.z
+                        {
+                            "scale",
+                            {
+                                transform.scale.x,
+                                transform.scale.y,
+                                transform.scale.z
 
-						}
-
-
-					}
-				}
-			}
-			});
-
-		const std::filesystem::path path(filePath);
-
-		std::error_code error;
-		std::filesystem::create_directories((path.parent_path()), error);
-
-		if (error) {
-
-			return false;
-
-		}
-
-		std::ofstream file(path);
-
-		if (!file.is_open()) {
-
-			return false;
-
-		}
-
-		file << root.dump(4);
-
-		return true;
-
-	}
-
-	bool SceneSerializer::Load(const std::string& filePath, SceneObject& object)
-	{
-
-		std::ifstream file(filePath);
-
-		if (!file.is_open()) {
-			return false;
-		}
-
-		try {
-
-			json root;
-
-			file >> root;
-
-			const json& objectData = root.at("objects").at(0);
-
-			const json& transformData =
-				objectData.at("transform");
-
-			const json& position =
-				transformData.at("position");
-
-			const json& rotation =
-				transformData.at("rotation");
-
-			const json& scale =
-				transformData.at("scale");
+                            }
 
 
+                        }
+                    }
+                }
 
-			const uint64_t loadedId =
-				objectData.at("id").get<uint64_t>();
+                });
+        }
 
-			const std::string loadedName =
-				objectData.at("name").get<std::string>();
+        const std::filesystem::path path(filePath);
 
-			const std::string loadedModelPath =
-				objectData.at("modelPath").get<std::string>();
+        std::error_code error;
+        std::filesystem::create_directories((path.parent_path()), error);
 
+        if (error) {
 
-			Transform loadedTransform;
+            return false;
 
-			loadedTransform.translate = {
-				position.at(0).get<float>(),
-				position.at(1).get<float>(),
-				position.at(2).get<float>()
-			};
+        }
 
-			loadedTransform.rotate = {
-				rotation.at(0).get<float>(),
-				rotation.at(1).get<float>(),
-				rotation.at(2).get<float>()
-			};
+        std::ofstream file(path);
 
-			loadedTransform.scale = {
-				scale.at(0).get<float>(),
-				scale.at(1).get<float>(),
-				scale.at(2).get<float>()
-			};
+        if (!file.is_open()) {
 
+            return false;
 
-			// 全部正常に読めたらSceneObjectへ反映する
-			object.id = loadedId;
-			object.name = loadedName;
-			object.modelPath = loadedModelPath;
-			object.transform = loadedTransform;
+        }
 
-			return true;
-		}
+        file << root.dump(4);
 
-		catch (const json::exception&) {
-			// JSONの項目不足や形式不正
-			return false;
-		}
+        return true;
 
-	}
+    }
+
+    bool SceneSerializer::Load(
+        const std::string& filePath,
+        Scene& scene) {
+
+        std::ifstream file(filePath);
+
+        if (!file.is_open()) {
+            return false;
+        }
+
+        try {
+            json root;
+            file >> root;
+
+            const json& objectsData = root.at("objects");
+
+            if (!objectsData.is_array()) {
+                return false;
+            }
+
+            // 読み込み途中で失敗しても、元のsceneを壊さないようにする
+            Scene loadedScene;
+
+            for (const json& objectData : objectsData) {
+                const json& transformData =
+                    objectData.at("transform");
+
+                const json& position =
+                    transformData.at("position");
+
+                const json& rotation =
+                    transformData.at("rotation");
+
+                const json& scale =
+                    transformData.at("scale");
+
+                SceneObject object;
+
+                object.id =
+                    objectData.at("id").get<uint64_t>();
+
+                object.name =
+                    objectData.at("name").get<std::string>();
+
+                object.modelPath =
+                    objectData.at("modelPath").get<std::string>();
+
+                object.transform.translate = {
+                    position.at(0).get<float>(),
+                    position.at(1).get<float>(),
+                    position.at(2).get<float>()
+                };
+
+                object.transform.rotate = {
+                    rotation.at(0).get<float>(),
+                    rotation.at(1).get<float>(),
+                    rotation.at(2).get<float>()
+                };
+
+                object.transform.scale = {
+                    scale.at(0).get<float>(),
+                    scale.at(1).get<float>(),
+                    scale.at(2).get<float>()
+                };
+
+                loadedScene.AddObject(std::move(object));
+            }
+
+            // 全オブジェクトを正常に読めた場合のみ反映する
+            scene = std::move(loadedScene);
+
+            return true;
+        }
+        catch (const json::exception&) {
+            // JSONの項目不足、型違い、配列不足など
+            return false;
+        }
+    }
 
 }

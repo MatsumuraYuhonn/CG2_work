@@ -1,7 +1,7 @@
 #pragma once
 #include<string>
 
-#include "MTEngine/Engine/Scene/SceneObject.h"
+#include "MTEngine/Engine/Scene/Scene.h"
 
 namespace MTEngine {
 
@@ -13,12 +13,12 @@ namespace MTEngine {
         // objectの内容をJSONファイルへ保存する
         static bool Save(
             const std::string& filePath,
-            const SceneObject& object);
+            const Scene& scene);
 
         // JSONファイルからobjectへ読み込む
         static bool Load(
             const std::string& filePath,
-            SceneObject& object);
+            Scene& scene);
 
 	};
 

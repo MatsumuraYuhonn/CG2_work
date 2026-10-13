@@ -1,6 +1,7 @@
 #include "BaseEditor.h"
 
 #include "MTEngine/Engine/Debug/DebugCamera.h"
+#include "MTEngine/Engine/Scene/Scene.h"
 
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
@@ -11,9 +12,10 @@ namespace MTEngine {
 
     void BaseEditor::Initialize(
         D3D12_GPU_DESCRIPTOR_HANDLE sceneTextureHandle,
-        DebugCamera* debugCamera) {
+        DebugCamera* debugCamera, Scene* scene) {
         sceneTextureHandle_ = sceneTextureHandle;
         debugCamera_ = debugCamera;
+		scene_ = scene;
     }
 
     void BaseEditor::Update() {
@@ -52,13 +54,50 @@ namespace MTEngine {
         if (ImGui::TreeNodeEx(
             "MTEngine",
             ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            if (ImGui::Selectable("Debug Camera", isDebugCameraSelected_)) {
+            if (ImGui::Selectable(
+                "Debug Camera",
+                isDebugCameraSelected_)) {
+
                 isDebugCameraSelected_ = true;
+                selectedObjectId_ = 0;
             }
             ImGui::TreePop();
         }
+
         ImGui::Spacing();
-        ImGui::TextDisabled("Game objects can be added here later.");
+
+        ImGui::TextDisabled("Scene Objects");
+        ImGui::Separator();
+
+        if (scene_) {
+            const std::vector<SceneObject>& objects =
+                scene_->GetObjects();
+
+            if (objects.empty()) {
+                ImGui::TextDisabled("Empty Scene");
+            }
+
+            for (const SceneObject& object : objects) {
+                const bool isSelected =
+                    !isDebugCameraSelected_ &&
+                    selectedObjectId_ == object.id;
+
+                // 同じ名前のオブジェクトがあっても区別できるラベル
+                const std::string label =
+                    object.name +
+                    "##SceneObject" +
+                    std::to_string(object.id);
+
+                if (ImGui::Selectable(
+                    label.c_str(),
+                    isSelected)) {
+
+                    selectedObjectId_ = object.id;
+                    isDebugCameraSelected_ = false;
+                }
+            }
+        }
+
         ImGui::End();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -108,9 +147,27 @@ namespace MTEngine {
             if (ImGui::SliderAngle("Pitch", &pitch, -89.0f, 89.0f)) {
                 debugCamera_->SetPitch(pitch);
             }
+
+        } else if (scene_ && selectedObjectId_ != 0) {
+
+            SceneObject* selectedObject =
+                scene_->FindObject(selectedObjectId_);
+
+            if (selectedObject) {
+                ImGui::Text("%s", selectedObject->name.c_str());
+                ImGui::Separator();
+                ImGui::TextDisabled(
+                    "Transform editing will be added next.");
+            }
+            else {
+                selectedObjectId_ = 0;
+                ImGui::TextDisabled("No object selected");
+            }
+
         } else {
             ImGui::TextDisabled("No object selected");
         }
+
         ImGui::End();
 
         ImGui::Begin("Console", nullptr, panelFlags);

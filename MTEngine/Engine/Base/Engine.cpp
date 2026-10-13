@@ -184,7 +184,7 @@ namespace MTEngine {
         editor_ = std::make_unique<BaseEditor>();
         editor_->Initialize(
             renderer_->GetSceneTextureHandle(),
-            &debugCamera_);
+            &debugCamera_, &scene_);
         isInitialized_ = true;
         OnInitialize();
     }
