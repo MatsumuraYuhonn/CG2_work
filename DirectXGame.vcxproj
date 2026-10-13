@@ -177,6 +177,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClInclude Include="MTEngine\Engine\Editor\SceneAxis.h" />
     <ClInclude Include="MTEngine\Engine\Debug\ImGuiManager.h" />
     <ClInclude Include="MTEngine\Engine\Debug\Logger.h" />
+    <ClInclude Include="MTEngine\Engine\externals\json.hpp" />
     <ClInclude Include="MTEngine\Engine\Graphics\ConstantBuffer.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\DescriptorHeapManager.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\GraphicsManager.h" />
@@ -190,7 +191,8 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClInclude Include="MTEngine\Engine\Math\Matrix.h" />
     <ClInclude Include="MTEngine\Engine\Math\Transform.h" />
     <ClInclude Include="MTEngine\Engine\Math\Vector.h" />
-    <ClInclude Include="SceneObject.h" />
+    <ClInclude Include="MTEngine\Engine\Scene\SceneObject.h" />
+    <ClInclude Include="MTEngine\Engine\Scene\SceneSerializer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="externals\imgui\imgui.cpp" />
@@ -225,6 +227,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClCompile Include="MTEngine\Engine\Input\GamePad.cpp" />
     <ClCompile Include="MTEngine\Engine\Input\Input.cpp" />
     <ClCompile Include="MTEngine\Engine\Math\Vector.cpp" />
+    <ClCompile Include="MTEngine\Engine\Scene\SceneSerializer.cpp" />
     <ClCompile Include="MTEngine\Game\main.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -40,6 +40,9 @@
     <Filter Include="Engine\Scene">
       <UniqueIdentifier>{fd4372b0-172e-4d7c-867b-0261536aa784}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Externals">
+      <UniqueIdentifier>{f18386b0-55ab-494d-bf8a-69b082ab3f6a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MTEngine\Engine\Audio\Sound.h">
@@ -147,7 +150,13 @@
     <ClInclude Include="MTEngine\Engine\Input\GamePad.h">
       <Filter>Engine\Input</Filter>
     </ClInclude>
-    <ClInclude Include="SceneObject.h">
+    <ClInclude Include="MTEngine\Engine\externals\json.hpp">
+      <Filter>Engine\Externals</Filter>
+    </ClInclude>
+    <ClInclude Include="MTEngine\Engine\Scene\SceneSerializer.h">
+      <Filter>Engine\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="MTEngine\Engine\Scene\SceneObject.h">
       <Filter>Engine\Scene</Filter>
     </ClInclude>
   </ItemGroup>
@@ -250,6 +259,9 @@
     </ClCompile>
     <ClCompile Include="MTEngine\Engine\Input\GamePad.cpp">
       <Filter>Engine\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Scene\SceneSerializer.cpp">
+      <Filter>Engine\Scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
