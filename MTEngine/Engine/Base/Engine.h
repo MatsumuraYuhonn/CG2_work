@@ -73,7 +73,7 @@ namespace MTEngine {
         void Update();
         void Draw();
 
-        HWND hwnd_ = nullptr;
+        Window window_;
         bool isInitialized_ = false;
         std::unique_ptr<Input> input_;
 

@@ -100,9 +100,20 @@ namespace MTEngine {
         createLogFile();
         Log("MTEngine initialized\n");
 
-        hwnd_ = CreateGameWindow();
+        const bool isWindowInitialized = window_.Initialize();
+        assert(isWindowInitialized);
+        if (!isWindowInitialized) {
+            MessageBoxW(
+                nullptr,
+                L"ウィンドウの初期化に失敗しました。",
+                L"MTEngine - Window Error",
+                MB_OK | MB_ICONERROR);
+            ExitProcess(EXIT_FAILURE);
+        }
+
+        const HWND hwnd = window_.GetHwnd();
         input_ = std::make_unique<Input>();
-        input_->Initialize(GetModuleHandle(nullptr), hwnd_);
+        input_->Initialize(GetModuleHandle(nullptr), hwnd);
 
 #ifdef _DEBUG
         Microsoft::WRL::ComPtr<ID3D12Debug1> debugController;
@@ -139,9 +150,9 @@ namespace MTEngine {
         const bool isSwapChainInitialized = swapChain_.Initialize(
             dx12Device_.GetDxgiFactory(),
             dx12Device_.GetCommandQueue(),
-            hwnd_,
-            kClientWidth,
-            kClientHeight);
+            hwnd,
+            Window::kClientWidth,
+            Window::kClientHeight);
         assert(isSwapChainInitialized);
 
         shaderCompiler_ = std::make_unique<ShaderCompiler>();
@@ -149,7 +160,7 @@ namespace MTEngine {
         assert(isShaderCompilerInitialized);
         if (!isShaderCompilerInitialized) {
             MessageBoxW(
-                hwnd_,
+                hwnd,
                 L"シェーダーコンパイラーの初期化に失敗しました。",
                 L"MTEngine - Shader Compiler Error",
                 MB_OK | MB_ICONERROR);
@@ -164,15 +175,15 @@ namespace MTEngine {
             &dx12Device_,
             &swapChain_,
             pipelineManager_.get(),
-            kClientWidth,
-            kClientHeight);
+            Window::kClientWidth,
+            Window::kClientHeight);
 
         audioManager_ = std::make_unique<AudioManager>();
         audioManager_->Initialize();
 
         imGuiManager_ = std::make_unique<ImGuiManager>();
         imGuiManager_->Initialize(
-            hwnd_,
+            hwnd,
             device.Get(),
             swapChain_.GetBufferCount(),
             DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
@@ -191,15 +202,9 @@ namespace MTEngine {
 
     void Engine::Run() {
         assert(isInitialized_);
-        MSG message{};
-        while (message.message != WM_QUIT) {
-            if (PeekMessage(&message, nullptr, 0, 0, PM_REMOVE)) {
-                TranslateMessage(&message);
-                DispatchMessage(&message);
-            } else {
-                Update();
-                Draw();
-            }
+        while (window_.ProcessMessages()) {
+            Update();
+            Draw();
         }
     }
 
@@ -209,9 +214,15 @@ namespace MTEngine {
         editor_->Update();
         OnUpdate();
 #ifdef USE_IMGUI
-        debugCamera_.Update(input_.get(), editor_->IsSceneViewFocused());
+        debugCamera_.Update(
+            input_.get(),
+            editor_->IsSceneViewFocused(),
+            window_.ConsumeMouseWheelDelta());
 #else
-        debugCamera_.Update(input_.get(), true);
+        debugCamera_.Update(
+            input_.get(),
+            true,
+            window_.ConsumeMouseWheelDelta());
 #endif
         imGuiManager_->EndFrame();
     }
@@ -248,8 +259,7 @@ namespace MTEngine {
         shaderCompiler_.reset();
         input_.reset();
 
-        CloseWindow(hwnd_);
-        hwnd_ = nullptr;
+        window_.Finalize();
         CoUninitialize();
         isInitialized_ = false;
     }
