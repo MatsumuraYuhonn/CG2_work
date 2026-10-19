@@ -51,6 +51,7 @@ namespace MTEngine {
         ImGui::Begin("Hierarchy", nullptr, panelFlags);
         ImGui::TextDisabled("Engine Objects");
         ImGui::Separator();
+
         if (ImGui::TreeNodeEx(
             "MTEngine",
             ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -68,6 +69,56 @@ namespace MTEngine {
 
         ImGui::TextDisabled("Scene Objects");
         ImGui::Separator();
+
+        if (scene_ && ImGui::Button("+ Add Object")) {
+            ImGui::OpenPopup("Add Scene Object");
+        }
+
+        if (ImGui::BeginPopupModal(
+            "Add Scene Object",
+            nullptr,
+            ImGuiWindowFlags_AlwaysAutoResize)) {
+
+            ImGui::InputText(
+                "Name",
+                newObjectName_,
+                sizeof(newObjectName_));
+
+            ImGui::InputText(
+                "Model Path",
+                newModelPath_,
+                sizeof(newModelPath_));
+
+            const bool canCreate =
+                newObjectName_[0] != '\0' &&
+                newModelPath_[0] != '\0';
+
+            if (!canCreate) {
+                ImGui::BeginDisabled();
+            }
+
+            if (ImGui::Button("Create")) {
+                selectedObjectId_ = scene_->CreateObject(
+                    newObjectName_,
+                    newModelPath_);
+
+                isDebugCameraSelected_ = false;
+
+                ImGui::CloseCurrentPopup();
+            }
+
+            if (!canCreate) {
+                ImGui::EndDisabled();
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Cancel")) {
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
 
         if (scene_) {
             const std::vector<SceneObject>& objects =
@@ -94,6 +145,17 @@ namespace MTEngine {
 
                     selectedObjectId_ = object.id;
                     isDebugCameraSelected_ = false;
+                }
+            }
+
+            if (scene_ && selectedObjectId_ != 0) {
+                ImGui::Spacing();
+
+                if (ImGui::Button("Delete Selected")) {
+                    scene_->RemoveObject(selectedObjectId_);
+
+                    selectedObjectId_ = 0;
+                    isDebugCameraSelected_ = true;
                 }
             }
         }
@@ -154,12 +216,64 @@ namespace MTEngine {
                 scene_->FindObject(selectedObjectId_);
 
             if (selectedObject) {
+           
                 ImGui::Text("%s", selectedObject->name.c_str());
-                ImGui::Separator();
                 ImGui::TextDisabled(
-                    "Transform editing will be added next.");
-            }
-            else {
+                    "ID: %llu",
+                    static_cast<unsigned long long>(selectedObject->id));
+
+                ImGui::Separator();
+
+                Transform& transform =
+                    selectedObject->transform;
+
+                ImGui::Text("Transform");
+
+                ImGui::DragFloat3(
+                    "Position",
+                    &transform.translate.x,
+                    0.1f);
+
+                constexpr float kRadiansToDegrees =
+                    180.0f / 3.14159265f;
+
+                constexpr float kDegreesToRadians =
+                    3.14159265f / 180.0f;
+
+                float rotationDegrees[3] = {
+                    transform.rotate.x * kRadiansToDegrees,
+                    transform.rotate.y * kRadiansToDegrees,
+                    transform.rotate.z * kRadiansToDegrees
+                };
+
+                if (ImGui::DragFloat3(
+                    "Rotation",
+                    rotationDegrees,
+                    0.5f)) {
+
+                    transform.rotate.x =
+                        rotationDegrees[0] * kDegreesToRadians;
+
+                    transform.rotate.y =
+                        rotationDegrees[1] * kDegreesToRadians;
+
+                    transform.rotate.z =
+                        rotationDegrees[2] * kDegreesToRadians;
+                }
+
+                ImGui::DragFloat3(
+                    "Scale",
+                    &transform.scale.x,
+                    0.01f);
+
+                ImGui::Separator();
+
+                ImGui::TextDisabled("Model");
+                ImGui::TextWrapped(
+                    "%s",
+                    selectedObject->modelPath.c_str());
+
+            } else {
                 selectedObjectId_ = 0;
                 ImGui::TextDisabled("No object selected");
             }

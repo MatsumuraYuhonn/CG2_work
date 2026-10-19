@@ -29,6 +29,10 @@ namespace MTEngine {
         bool isSceneViewFocused_ = false;
         bool isDebugCameraSelected_ = true;
         bool isLayoutInitialized_ = false;
+
+        char newObjectName_[128] = "New Object";
+        char newModelPath_[512] = "";
+
     };
 
 }
