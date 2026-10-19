@@ -1,8 +1,6 @@
 #pragma once
 #include <d3d12.h>
 #include <wrl.h>
-#include <cassert>
-#include <memory>
 #include "MTEngine/Engine/Base/Dx12Device.h"
 #include "MTEngine/Engine/Base/SwapChain.h"
 #include "MTEngine/Engine/Graphics/DescriptorHeapManager.h"

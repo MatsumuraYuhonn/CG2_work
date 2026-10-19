@@ -3,7 +3,6 @@
 #include <dxgi1_6.h>
 #include <wrl.h>
 #include <cstdint>
-#include <cassert>
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")

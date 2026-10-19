@@ -5,7 +5,6 @@
 #include <string>
 #include <unordered_map>
 #include "MTEngine/Engine/Math/Vector.h" 
-#include "MTEngine/Engine/Graphics/TextureManager.h"
 
 namespace MTEngine {
 
@@ -28,7 +27,6 @@ namespace MTEngine {
         std::vector<MeshData> meshes;
     };
 
-    // 前方宣言 (TextureManagerの実装に合わせて適宜調整してください)
     class TextureManager;
 
     class Model {

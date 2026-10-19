@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <cassert>
+#include "MTEngine/Engine/Graphics/TextureManager.h"
 
 namespace MTEngine {
 
