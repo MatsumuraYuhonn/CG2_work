@@ -21,11 +21,18 @@ namespace MTEngine {
         // IDを指定して削除する
         bool RemoveObject(uint64_t id);
 
+        // IDを指定して複製し、新しく割り当てたIDを返す
+        // 対象が存在しない場合は0を返す
+        uint64_t DuplicateObject(uint64_t id);
+
         // IDからオブジェクトを検索する
         SceneObject* FindObject(uint64_t id);
         const SceneObject* FindObject(uint64_t id) const;
 
-        // Hierarchyや保存処理で一覧を参照する
+        // 描画側が実行時リソースを設定するための変更可能な一覧
+        std::vector<SceneObject>& GetObjects();
+
+        // Hierarchyや保存処理で一覧を参照する読み取り専用の一覧
         const std::vector<SceneObject>& GetObjects() const;
 
         // シーン内のオブジェクトをすべて削除する

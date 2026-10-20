@@ -30,14 +30,19 @@ namespace MTEngine {
         // ファイルからテクスチャを読み込み、リソースおよびSRVを作成する
         // filePath: 読み込むファイルのパス
         // commandList: コピー転送に使用するコマンドリスト
-        void Load(const std::string& filePath, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
+        bool Load(const std::string& filePath, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
 
-        // 指定したパスのテクスチャに対応するGPUディスクリプタハンドルを取得
-        D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(const std::string& filePath) const;
+        // 読み込み済みテクスチャのGPUハンドルを取得する。
+        // 未読み込みの場合はfalseを返す。
+        bool TryGetGPUDescriptorHandle(
+            const std::string& filePath,
+            D3D12_GPU_DESCRIPTOR_HANDLE& handle) const;
 
     private:
         // テクスチャファイルをロード
-        DirectX::ScratchImage LoadTextureFile(const std::string& filePath);
+        bool LoadTextureFile(
+            const std::string& filePath,
+            DirectX::ScratchImage& mipImages);
 
         // テクスチャ用GPUリソースの生成
         Microsoft::WRL::ComPtr<ID3D12Resource> CreateTextureResource(const DirectX::TexMetadata& metadata);

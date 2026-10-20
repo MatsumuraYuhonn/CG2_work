@@ -2,6 +2,7 @@
 #include "DescriptorHeapManager.h"
 #include "externals/DirectXTex/d3dx12.h"
 #include <cassert>
+#include <utility>
 
 namespace MTEngine {
 
@@ -16,27 +17,41 @@ namespace MTEngine {
         srvHeapManager_ = srvHeapManager;
     }
 
-    void TextureManager::Load(const std::string& filePath, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList) {
+    bool TextureManager::Load(const std::string& filePath, Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList) {
+        if (!device_ || !srvHeapManager_ || !commandList || filePath.empty()) {
+            return false;
+        }
+
         // 既に読み込み済みならスキップ
         if (textures_.find(filePath) != textures_.end()) {
-            return;
+            return true;
         }
 
         // 1. ファイル読み込み
-        DirectX::ScratchImage mipImages = LoadTextureFile(filePath);
+        DirectX::ScratchImage mipImages;
+        if (!LoadTextureFile(filePath, mipImages)) {
+            return false;
+        }
         const DirectX::TexMetadata& metadata = mipImages.GetMetadata();
 
         // 2. リソース作成
         Microsoft::WRL::ComPtr<ID3D12Resource> textureResource = CreateTextureResource(metadata);
+        if (!textureResource) {
+            return false;
+        }
 
         // 3. データの転送
         Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource = UploadTextureData(textureResource, mipImages, commandList);
+        if (!intermediateResource) {
+            return false;
+        }
         intermediateResources_.push_back(intermediateResource); // コマンド実行完了まで保持
 
-        // 4. SRVの作成（ヒープからハンドルを確保する実装が DescriptorHeapManager にあると仮定）
-        // ※引数にインデックスを直接指定する場合は、マネージャ側で空き番号を管理できるようにするとより良いです
-        // 0番はImGuiフォント、1番はSceneビュー用レンダーテクスチャとして予約する。
-        uint32_t index = static_cast<uint32_t>(textures_.size() + 2);
+        // 4. 共通SRVヒープから空き番号を確保してSRVを作成する。
+        uint32_t index = 0;
+        if (!srvHeapManager_->AllocateDescriptor(index)) {
+            return false;
+        }
         D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU = srvHeapManager_->GetCPUDescriptorHandle(index);
         D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU = srvHeapManager_->GetGPUDescriptorHandle(index);
 
@@ -56,25 +71,44 @@ namespace MTEngine {
         data.srvHandleGPU = srvHandleGPU;
 
         textures_[filePath] = data;
+        return true;
     }
 
-    D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetGPUDescriptorHandle(const std::string& filePath) const {
+    bool TextureManager::TryGetGPUDescriptorHandle(
+        const std::string& filePath,
+        D3D12_GPU_DESCRIPTOR_HANDLE& handle) const {
+
         auto it = textures_.find(filePath);
-        assert(it != textures_.end() && "Texture not found!");
-        return it->second.srvHandleGPU;
+        if (it == textures_.end()) {
+            return false;
+        }
+
+        handle = it->second.srvHandleGPU;
+        return true;
     }
 
-    DirectX::ScratchImage TextureManager::LoadTextureFile(const std::string& filePath) {
+    bool TextureManager::LoadTextureFile(
+        const std::string& filePath,
+        DirectX::ScratchImage& mipImages) {
+
         DirectX::ScratchImage image{};
         std::wstring filePathw = ConvertString(filePath);
         HRESULT hr = DirectX::LoadFromWICFile(filePathw.c_str(), DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
-        assert(SUCCEEDED(hr));
+        if (FAILED(hr)) {
+            return false;
+        }
 
         DirectX::ScratchImage mipImage{};
         hr = DirectX::GenerateMipMaps(image.GetImages(), image.GetImageCount(), image.GetMetadata(), DirectX::TEX_FILTER_SRGB, 0, mipImage);
-        assert(SUCCEEDED(hr));
+        if (SUCCEEDED(hr)) {
+            mipImages = std::move(mipImage);
+        }
+        else {
+            // ミップ生成に対応していない画像でも、元画像は使用できる。
+            mipImages = std::move(image);
+        }
 
-        return mipImage;
+        return true;
     }
 
     Microsoft::WRL::ComPtr<ID3D12Resource> TextureManager::CreateTextureResource(const DirectX::TexMetadata& metadata) {
@@ -99,7 +133,9 @@ namespace MTEngine {
             nullptr,
             IID_PPV_ARGS(&resource)
         );
-        assert(SUCCEEDED(hr));
+        if (FAILED(hr)) {
+            return nullptr;
+        }
 
         return resource;
     }
@@ -109,6 +145,9 @@ namespace MTEngine {
     {
         std::vector<D3D12_SUBRESOURCE_DATA> subresources;
         DirectX::PrepareUpload(device_.Get(), mipImages.GetImages(), mipImages.GetImageCount(), mipImages.GetMetadata(), subresources);
+        if (subresources.empty()) {
+            return nullptr;
+        }
         uint64_t intermediateSize = GetRequiredIntermediateSize(texture.Get(), 0, UINT(subresources.size()));
 
         Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource = CreateBufferResource(device_, intermediateSize);

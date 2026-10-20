@@ -22,6 +22,8 @@ namespace MTEngine {
 
         // デバイスからこのヒープタイプのハンドルインクリメントサイズを取得
         descriptorSize_ = device->GetDescriptorHandleIncrementSize(heapType);
+        descriptorCount_ = numDescriptors;
+        nextDescriptorIndex_ = 0;
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHeapManager::GetCPUDescriptorHandle(uint32_t index) const {
@@ -36,6 +38,16 @@ namespace MTEngine {
         D3D12_GPU_DESCRIPTOR_HANDLE handle = descriptorHeap_->GetGPUDescriptorHandleForHeapStart();
         handle.ptr += (static_cast<size_t>(descriptorSize_) * index);
         return handle;
+    }
+
+    bool DescriptorHeapManager::AllocateDescriptor(uint32_t& index) {
+        if (nextDescriptorIndex_ >= descriptorCount_) {
+            return false;
+        }
+
+        index = nextDescriptorIndex_;
+        ++nextDescriptorIndex_;
+        return true;
     }
 
 }

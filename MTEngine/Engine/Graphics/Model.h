@@ -1,10 +1,13 @@
 #pragma once
 #include <d3d12.h>
 #include <wrl.h>
+#include <optional>
+#include <memory>
 #include <vector>
 #include <string>
 #include <unordered_map>
 #include "MTEngine/Engine/Math/Vector.h" 
+#include "MTEngine/Engine/Graphics/ConstantBuffer.h"
 #include "MTEngine/Engine/Graphics/TextureManager.h"
 
 namespace MTEngine {
@@ -33,18 +36,25 @@ namespace MTEngine {
 
     class Model {
     public:
-        static ModelData LoadObjFile(const std::string& directoryPath, const std::string& filename);
+        // OBJの読み込みに成功した場合はModelData、失敗した場合はstd::nulloptを返す。
+        static std::optional<ModelData> LoadObjFile(
+            const std::string& directoryPath,
+            const std::string& filename);
 
         Model();
         ~Model();
 
         bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, const ModelData& modelData);
         void Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, TextureManager* textureManager);
+        void DrawTextured(
+            Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList,
+            TextureManager* textureManager);
 
         struct MeshResource {
             Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;
             D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
             std::string textureFilePath;
+            std::unique_ptr<MaterialConstantBuffer> materialBuffer;
             UINT vertexCount; // 頂点数を保持
         };
 

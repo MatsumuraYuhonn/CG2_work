@@ -47,6 +47,23 @@ namespace MTEngine {
         return true;
     }
 
+    uint64_t Scene::DuplicateObject(uint64_t id) {
+        const SceneObject* source = FindObject(id);
+        if (!source) {
+            return 0;
+        }
+
+        // SceneObjectは描画用リソースを持つため、オブジェクト全体はコピーしない。
+        // シーンとして保存する情報だけを引き継ぎ、描画用リソースは
+        // SceneRendererに新しく作成してもらう。
+        SceneObject duplicate;
+        duplicate.name = source->name + " Copy";
+        duplicate.modelPath = source->modelPath;
+        duplicate.transform = source->transform;
+
+        return AddObject(std::move(duplicate));
+    }
+
     SceneObject* Scene::FindObject(uint64_t id) {
         const auto iterator = std::find_if(
             objects_.begin(),
@@ -75,6 +92,10 @@ namespace MTEngine {
         }
 
         return &(*iterator);
+    }
+
+    std::vector<SceneObject>& Scene::GetObjects() {
+        return objects_;
     }
 
     const std::vector<SceneObject>& Scene::GetObjects() const {

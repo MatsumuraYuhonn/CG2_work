@@ -74,8 +74,13 @@ namespace MTEngine {
         transformConstantBuffer_.Initialize(device);
         lightConstantBuffer_.Initialize(device);
 
-        const ModelData sourceModelData = Model::LoadObjFile("MTEngine/Assets/Resources", "axis.obj");
-        SplitAxisModel(sourceModelData, axisModelData_);
+        const std::optional<ModelData> loadedModelData =
+            Model::LoadObjFile("MTEngine/Assets/Resources", "axis.obj");
+        if (!loadedModelData.has_value()) {
+            return;
+        }
+
+        SplitAxisModel(loadedModelData.value(), axisModelData_);
         for (size_t axisIndex = 0; axisIndex < axisModels_.size(); ++axisIndex) {
             axisModels_[axisIndex].Initialize(device, axisModelData_[axisIndex]);
         }

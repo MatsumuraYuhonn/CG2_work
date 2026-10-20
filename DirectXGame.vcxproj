@@ -193,6 +193,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClInclude Include="MTEngine\Engine\Math\Vector.h" />
     <ClInclude Include="MTEngine\Engine\Scene\Scene.h" />
     <ClInclude Include="MTEngine\Engine\Scene\SceneObject.h" />
+    <ClInclude Include="MTEngine\Engine\Scene\SceneRenderer.h" />
     <ClInclude Include="MTEngine\Engine\Scene\SceneSerializer.h" />
   </ItemGroup>
   <ItemGroup>
@@ -229,6 +230,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClCompile Include="MTEngine\Engine\Input\Input.cpp" />
     <ClCompile Include="MTEngine\Engine\Math\Vector.cpp" />
     <ClCompile Include="MTEngine\Engine\Scene\Scene.cpp" />
+    <ClCompile Include="MTEngine\Engine\Scene\SceneRenderer.cpp" />
     <ClCompile Include="MTEngine\Engine\Scene\SceneSerializer.cpp" />
     <ClCompile Include="MTEngine\Game\main.cpp" />
   </ItemGroup>

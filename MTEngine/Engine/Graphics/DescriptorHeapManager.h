@@ -28,9 +28,15 @@ namespace MTEngine {
         D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(uint32_t index) const;
         D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(uint32_t index) const;
 
+        // ヒープ内の未使用インデックスを1つ確保する。
+        // 確保できない場合はfalseを返す。
+        bool AllocateDescriptor(uint32_t& index);
+
     private:
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap_ = nullptr;
         UINT descriptorSize_ = 0;
+        UINT descriptorCount_ = 0;
+        uint32_t nextDescriptorIndex_ = 0;
     };
 
 }

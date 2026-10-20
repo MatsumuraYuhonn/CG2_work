@@ -19,6 +19,7 @@
 #include "MTEngine/Engine/Graphics/Renderer.h"
 #include "MTEngine/Engine/Input/Input.h"
 #include "MTEngine/Engine/Scene/Scene.h"
+#include "MTEngine/Engine/Scene/SceneRenderer.h"
 
 #pragma comment(lib, "dxcompiler.lib")
 
@@ -89,6 +90,7 @@ namespace MTEngine {
 		std::unique_ptr<ShaderCompiler> shaderCompiler_;
 		std::unique_ptr<PipelineManager> pipelineManager_;
 		std::unique_ptr<Renderer> renderer_;
+		std::unique_ptr<SceneRenderer> sceneRenderer_;
 		std::unique_ptr<ImGuiManager> imGuiManager_;
 		std::unique_ptr<BaseEditor> editor_;
 		std::unique_ptr<AudioManager> audioManager_;

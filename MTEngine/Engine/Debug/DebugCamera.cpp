@@ -13,6 +13,10 @@ namespace MTEngine {
     }
 
     void DebugCamera::Initialize() {
+        Reset();
+    }
+
+    void DebugCamera::Reset() {
         target_ = { 0.0f, 0.0f, 2.134f };
         distance_ = 79.0f;
         yaw_ = 0.0f;

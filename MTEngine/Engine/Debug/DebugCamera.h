@@ -13,6 +13,9 @@ namespace MTEngine {
         // カメラの初期化
         void Initialize();
 
+        // ターゲット、距離、向きを初期状態へ戻す
+        void Reset();
+
         // 入力に基づいたカメラの更新処理
         void Update(
             const Input* input,

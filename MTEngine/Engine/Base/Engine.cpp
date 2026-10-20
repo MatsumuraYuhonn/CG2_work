@@ -167,6 +167,13 @@ namespace MTEngine {
             kClientWidth,
             kClientHeight);
 
+        sceneRenderer_ = std::make_unique<SceneRenderer>();
+        const bool isSceneRendererInitialized =
+            sceneRenderer_->Initialize(
+                device,
+                renderer_->GetSrvHeapManager());
+        assert(isSceneRendererInitialized);
+
         audioManager_ = std::make_unique<AudioManager>();
         audioManager_->Initialize();
 
@@ -219,6 +226,10 @@ namespace MTEngine {
     void Engine::Draw() {
         renderer_->BeginFrame();
         renderer_->BeginScene();
+        sceneRenderer_->Draw(
+            scene_,
+            debugCamera_,
+            dx12Device_.GetCommandList());
         OnDraw();
         renderer_->EndScene();
 
@@ -243,6 +254,7 @@ namespace MTEngine {
 
         imGuiManager_->Finalize();
         imGuiManager_.reset();
+        sceneRenderer_.reset();
         renderer_.reset();
         pipelineManager_.reset();
         shaderCompiler_.reset();

@@ -14,6 +14,16 @@ namespace MTEngine {
         dsvHeapManager_.Initialize(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 2, false);
         srvHeapManager_.Initialize(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128, true);
 
+        // 0番をImGui、1番をSceneビュー用として先に確保する。
+        uint32_t imguiDescriptorIndex = 0;
+        uint32_t sceneDescriptorIndex = 0;
+        const bool reservedImGuiDescriptor =
+            srvHeapManager_.AllocateDescriptor(imguiDescriptorIndex);
+        const bool reservedSceneDescriptor =
+            srvHeapManager_.AllocateDescriptor(sceneDescriptorIndex);
+        assert(reservedImGuiDescriptor && imguiDescriptorIndex == 0);
+        assert(reservedSceneDescriptor && sceneDescriptorIndex == 1);
+
         // RTV作成
         D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
         rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
@@ -43,9 +53,12 @@ namespace MTEngine {
         sceneSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
         sceneSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
         sceneSrvDesc.Texture2D.MipLevels = 1;
-        // 0番はImGuiのフォント、1番はSceneビュー用に予約する。
-        sceneTextureSrvHandleGPU_ = srvHeapManager_.GetGPUDescriptorHandle(1);
-        device->CreateShaderResourceView(sceneRenderTargetResource_.Get(), &sceneSrvDesc, srvHeapManager_.GetCPUDescriptorHandle(1));
+        sceneTextureSrvHandleGPU_ =
+            srvHeapManager_.GetGPUDescriptorHandle(sceneDescriptorIndex);
+        device->CreateShaderResourceView(
+            sceneRenderTargetResource_.Get(),
+            &sceneSrvDesc,
+            srvHeapManager_.GetCPUDescriptorHandle(sceneDescriptorIndex));
 
         // ビューポート・シザー矩形
         viewport_.Width = static_cast<float>(width);

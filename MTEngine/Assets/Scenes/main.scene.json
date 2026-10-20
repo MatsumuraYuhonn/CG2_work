@@ -1,18 +1,18 @@
 {
     "objects": [
         {
-            "id": 3,
-            "modelPath": "C:\\Projects\\CG2\\DirectXGame\\MTEngine\\Assets\\Resources\\block",
-            "name": "New Object",
+            "id": 2,
+            "modelPath": "C:\\Projects\\CG2\\DirectXGame\\MTEngine\\Assets\\Resources\\plane.obj",
+            "name": "plane",
             "transform": {
                 "position": [
-                    0.0,
+                    2.200000047683716,
                     0.0,
                     0.0
                 ],
                 "rotation": [
                     0.0,
-                    0.0,
+                    3.1415927410125732,
                     0.0
                 ],
                 "scale": [
@@ -24,7 +24,7 @@
         },
         {
             "id": 4,
-            "modelPath": "C:\\Projects\\CG2\\DirectXGame\\MTEngine\\Assets\\Resources\\fence",
+            "modelPath": "C:\\Projects\\CG2\\DirectXGame\\MTEngine\\Assets\\Resources\\plane.obj",
             "name": "New Object",
             "transform": {
                 "position": [
@@ -34,7 +34,7 @@
                 ],
                 "rotation": [
                     0.0,
-                    0.0,
+                    3.1415927410125732,
                     0.0
                 ],
                 "scale": [

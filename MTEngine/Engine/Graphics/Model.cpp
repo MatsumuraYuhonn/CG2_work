@@ -2,10 +2,14 @@
 #include <fstream>
 #include <sstream>
 #include <cassert>
+#include <utility>
 
 namespace MTEngine {
 
-    ModelData Model::LoadObjFile(const std::string& directoryPath, const std::string& filename) {
+    std::optional<ModelData> Model::LoadObjFile(
+        const std::string& directoryPath,
+        const std::string& filename) {
+
         ModelData modelData;
 
         std::vector<Vector4> positions;
@@ -13,8 +17,11 @@ namespace MTEngine {
         std::vector<Vector2> texcoords;
         std::string line;
 
-        std::ifstream file(directoryPath + "/" + filename);
-        assert(file.is_open());
+        const std::string filePath = directoryPath + "/" + filename;
+        std::ifstream file(filePath);
+        if (!file.is_open()) {
+            return std::nullopt;
+        }
 
         // mtlファイルに定義されている全マテリアル（name -> MaterialData）
         std::unordered_map<std::string, MaterialData> materials;
@@ -118,9 +125,17 @@ namespace MTEngine {
             }
         }
 
-        // usemtl/mtllibが一度も無いobjへの後方互換（空メッシュを1つ用意）
-        if (modelData.meshes.empty()) {
-            modelData.meshes.emplace_back();
+        // ファイルを開けても、面がなく描画可能な頂点が無ければ読み込み失敗とする。
+        bool hasVertices = false;
+        for (const MeshData& mesh : modelData.meshes) {
+            if (!mesh.vertices.empty()) {
+                hasVertices = true;
+                break;
+            }
+        }
+
+        if (!hasVertices) {
+            return std::nullopt;
         }
 
         return modelData;
@@ -196,12 +211,27 @@ namespace MTEngine {
             resource.textureFilePath = meshData.material.textureFilePath;
             resource.vertexCount = (UINT)meshData.vertices.size();
 
+            resource.materialBuffer =
+                std::make_unique<MaterialConstantBuffer>();
+            if (!resource.materialBuffer->Initialize(device)) {
+                meshResources_.clear();
+                return false;
+            }
+
+            (*resource.materialBuffer)->color =
+                { 1.0f, 1.0f, 1.0f, 1.0f };
+            (*resource.materialBuffer)->enabledLighting = 0;
+            (*resource.materialBuffer)->uvTransform = MakeIdentityMatrix();
+            (*resource.materialBuffer)->lightingMode = 0;
+            (*resource.materialBuffer)->useTexture = 0;
+            (*resource.materialBuffer)->isSelected = 0;
+
             VertexData* vertexData = nullptr;
             resource.vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
             std::memcpy(vertexData, meshData.vertices.data(), sizeof(VertexData) * meshData.vertices.size());
             resource.vertexResource->Unmap(0, nullptr);
 
-            meshResources_.push_back(resource);
+            meshResources_.push_back(std::move(resource));
         }
         return true;
     }
@@ -209,10 +239,52 @@ namespace MTEngine {
     void Model::Draw(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList, TextureManager* textureManager) {
         for (const auto& mesh : meshResources_) {
             if (textureManager && !mesh.textureFilePath.empty()) {
-                D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = textureManager->GetGPUDescriptorHandle(mesh.textureFilePath);
-                commandList->SetGraphicsRootDescriptorTable(3, srvHandle);
+                D3D12_GPU_DESCRIPTOR_HANDLE srvHandle{};
+                if (textureManager->TryGetGPUDescriptorHandle(
+                    mesh.textureFilePath,
+                    srvHandle)) {
+
+                    commandList->SetGraphicsRootDescriptorTable(3, srvHandle);
+                }
             }
             commandList->IASetVertexBuffers(0, 1, &mesh.vertexBufferView);
+            commandList->DrawInstanced(mesh.vertexCount, 1, 0, 0);
+        }
+    }
+
+    void Model::DrawTextured(
+        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList,
+        TextureManager* textureManager) {
+
+        for (auto& mesh : meshResources_) {
+            if (!mesh.materialBuffer) {
+                continue;
+            }
+
+            int32_t useTexture = 0;
+            D3D12_GPU_DESCRIPTOR_HANDLE srvHandle{};
+            if (textureManager && !mesh.textureFilePath.empty()) {
+                if (textureManager->TryGetGPUDescriptorHandle(
+                    mesh.textureFilePath,
+                    srvHandle)) {
+
+                    useTexture = 1;
+                }
+            }
+
+            (*mesh.materialBuffer)->useTexture = useTexture;
+            commandList->SetGraphicsRootConstantBufferView(
+                0,
+                mesh.materialBuffer->GetGPUVirtualAddress());
+
+            if (useTexture != 0) {
+                commandList->SetGraphicsRootDescriptorTable(3, srvHandle);
+            }
+
+            commandList->IASetVertexBuffers(
+                0,
+                1,
+                &mesh.vertexBufferView);
             commandList->DrawInstanced(mesh.vertexCount, 1, 0, 0);
         }
     }

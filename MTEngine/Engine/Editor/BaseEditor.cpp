@@ -151,6 +151,18 @@ namespace MTEngine {
             if (scene_ && selectedObjectId_ != 0) {
                 ImGui::Spacing();
 
+                if (ImGui::Button("Duplicate Selected")) {
+                    const uint64_t duplicatedObjectId =
+                        scene_->DuplicateObject(selectedObjectId_);
+
+                    if (duplicatedObjectId != 0) {
+                        selectedObjectId_ = duplicatedObjectId;
+                        isDebugCameraSelected_ = false;
+                    }
+                }
+
+                ImGui::SameLine();
+
                 if (ImGui::Button("Delete Selected")) {
                     scene_->RemoveObject(selectedObjectId_);
 
@@ -210,6 +222,10 @@ namespace MTEngine {
                 debugCamera_->SetPitch(pitch);
             }
 
+            if (ImGui::Button("Reset Camera")) {
+                debugCamera_->Reset();
+            }
+
         } else if (scene_ && selectedObjectId_ != 0) {
 
             SceneObject* selectedObject =
@@ -265,6 +281,10 @@ namespace MTEngine {
                     "Scale",
                     &transform.scale.x,
                     0.01f);
+
+                if (ImGui::Button("Reset Transform")) {
+                    transform = Transform{};
+                }
 
                 ImGui::Separator();
 
