@@ -32,7 +32,9 @@ namespace MTEngine {
         style.Colors[ImGuiCol_Header] = ImVec4(0.16f, 0.29f, 0.40f, 1.0f);
         style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.21f, 0.40f, 0.55f, 1.0f);
         style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.13f, 0.46f, 0.67f, 1.0f);
+#ifdef IMGUI_HAS_DOCK
         style.Colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.055f, 0.065f, 0.08f, 1.0f);
+#endif
 
         ImGui_ImplWin32_Init(hwnd);
         ImGui_ImplDX12_Init(
@@ -46,7 +48,9 @@ namespace MTEngine {
 
         ImGuiIO& io = ImGui::GetIO();
 
+#ifdef IMGUI_HAS_DOCK
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+#endif
 
         io.Fonts->Build();
 #else
@@ -66,12 +70,14 @@ namespace MTEngine {
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
+#ifdef IMGUI_HAS_DOCK
         ImGuiID dockspaceID = ImGui::GetID("MainDockSpace");
 
         ImGui::DockSpaceOverViewport(
             dockspaceID,
             ImGui::GetMainViewport()
         );
+#endif
 #endif
     }
 
