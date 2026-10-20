@@ -18,6 +18,8 @@ mono_crash.*
 
 # Build results
 [Dd]ebug/
+!MTEngine/Engine/Debug/
+!MTEngine/Engine/Debug/**
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
