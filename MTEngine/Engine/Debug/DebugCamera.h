@@ -16,7 +16,7 @@ namespace MTEngine {
         // 入力に基づいたカメラの更新処理
         void Update(
             const Input* input,
-            bool enableControl,
+            bool enableControl = true,
             float mouseWheelDelta = 0.0f);
 
         // ビュー行列の取得
