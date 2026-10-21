@@ -5,6 +5,64 @@
 
 namespace MTEngine {
 
+    namespace {
+
+        D3D12_BLEND_DESC CreateBlendDesc(BlendMode blendMode) {
+            D3D12_BLEND_DESC blendDesc{};
+            D3D12_RENDER_TARGET_BLEND_DESC& renderTarget =
+                blendDesc.RenderTarget[0];
+
+            renderTarget.BlendEnable = FALSE;
+            renderTarget.LogicOpEnable = FALSE;
+            renderTarget.SrcBlend = D3D12_BLEND_ONE;
+            renderTarget.DestBlend = D3D12_BLEND_ZERO;
+            renderTarget.BlendOp = D3D12_BLEND_OP_ADD;
+
+            // Sceneビューの描画結果が透明にならないよう、出力先のalphaを維持する。
+            renderTarget.SrcBlendAlpha = D3D12_BLEND_ZERO;
+            renderTarget.DestBlendAlpha = D3D12_BLEND_ONE;
+            renderTarget.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+            renderTarget.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+            switch (blendMode) {
+            case BlendMode::kBlendModeNone:
+                break;
+            case BlendMode::kBlendModeNormal:
+                renderTarget.BlendEnable = TRUE;
+                renderTarget.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+                renderTarget.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+                break;
+            case BlendMode::kBlendModeAdd:
+                renderTarget.BlendEnable = TRUE;
+                renderTarget.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+                renderTarget.DestBlend = D3D12_BLEND_ONE;
+                break;
+            case BlendMode::kBlendModeSubtract:
+                renderTarget.BlendEnable = TRUE;
+                renderTarget.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+                renderTarget.DestBlend = D3D12_BLEND_ONE;
+                renderTarget.BlendOp = D3D12_BLEND_OP_REV_SUBTRACT;
+                break;
+            case BlendMode::kBlendModeMultiply:
+                renderTarget.BlendEnable = TRUE;
+                renderTarget.SrcBlend = D3D12_BLEND_ZERO;
+                renderTarget.DestBlend = D3D12_BLEND_SRC_COLOR;
+                break;
+            case BlendMode::kBlendModeScreen:
+                renderTarget.BlendEnable = TRUE;
+                renderTarget.SrcBlend = D3D12_BLEND_INV_DEST_COLOR;
+                renderTarget.DestBlend = D3D12_BLEND_ONE;
+                break;
+            default:
+                assert(false);
+                break;
+            }
+
+            return blendDesc;
+        }
+
+    }
+
     void PipelineManager::Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device, ShaderCompiler* shaderCompiler) {
         HRESULT hr = S_OK;
 
@@ -91,19 +149,6 @@ namespace MTEngine {
         inputLayoutDesc.pInputElementDescs = inputElementDescs;
         inputLayoutDesc.NumElements = _countof(inputElementDescs);
 
-        D3D12_BLEND_DESC blendDesc{};
-        blendDesc.RenderTarget[0].BlendEnable = TRUE;
-        blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-        blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-        blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-        // Preserve the render target alpha. The scene texture is displayed by
-        // ImGui, so replacing its alpha with a transparent sprite pixel would
-        // make the already-rendered 3D scene invisible in the Scene window.
-        blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ZERO;
-        blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ONE;
-        blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-        blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
         D3D12_RASTERIZER_DESC rasterizerDesc{};
         rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
         rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
@@ -123,7 +168,6 @@ namespace MTEngine {
         graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;
         graphicsPipelineStateDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
         graphicsPipelineStateDesc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
-        graphicsPipelineStateDesc.BlendState = blendDesc;
         graphicsPipelineStateDesc.RasterizerState = rasterizerDesc;
         graphicsPipelineStateDesc.NumRenderTargets = 1;
         graphicsPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
@@ -138,13 +182,33 @@ namespace MTEngine {
         graphicsPipelineStateDesc.DepthStencilState = depthStencilDesc;
         graphicsPipelineStateDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-        hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState_));
-        assert(SUCCEEDED(hr));
+        for (size_t index = 0; index < kBlendModeCount; ++index) {
+            const BlendMode blendMode = static_cast<BlendMode>(index);
+            graphicsPipelineStateDesc.BlendState = CreateBlendDesc(blendMode);
+
+            hr = device->CreateGraphicsPipelineState(
+                &graphicsPipelineStateDesc,
+                IID_PPV_ARGS(&graphicsPipelineStates_[index]));
+            assert(SUCCEEDED(hr));
+        }
     }
 
-    void PipelineManager::Bind(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList) {
+    void PipelineManager::Bind(
+        ID3D12GraphicsCommandList* commandList,
+        BlendMode blendMode) {
+        assert(commandList != nullptr);
+        const size_t index = static_cast<size_t>(blendMode);
+        assert(index < kBlendModeCount);
+
         commandList->SetGraphicsRootSignature(rootSignature_.Get());
-        commandList->SetPipelineState(graphicsPipelineState_.Get());
+        commandList->SetPipelineState(graphicsPipelineStates_[index].Get());
+    }
+
+    ID3D12PipelineState* PipelineManager::GetPipelineState(
+        BlendMode blendMode) const {
+        const size_t index = static_cast<size_t>(blendMode);
+        assert(index < kBlendModeCount);
+        return graphicsPipelineStates_[index].Get();
     }
 
 }

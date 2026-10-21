@@ -28,6 +28,9 @@ namespace MTEngine {
         // 描画フレームの終了処理（Present・GPU同期・コマンドリストリセット）
         void EndFrame();
 
+        // 以降の描画で使用するブレンドモードを設定する。
+        void SetBlendMode(BlendMode blendMode);
+
         // 各種ゲッター
         ID3D12GraphicsCommandList* GetCommandList() const { return dx12Device_->GetCommandList().Get(); }
         DescriptorHeapManager* GetSrvHeapManager() { return &srvHeapManager_; }
@@ -53,6 +56,7 @@ namespace MTEngine {
         D3D12_GPU_DESCRIPTOR_HANDLE sceneTextureSrvHandleGPU_{};
         D3D12_VIEWPORT viewport_{};
         D3D12_RECT scissorRect_{};
+        BlendMode blendMode_ = BlendMode::kBlendModeNormal;
     };
 
 }

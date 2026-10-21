@@ -2,80 +2,142 @@
 
 namespace MTEngine {
 
-	float gMouseWheelDelta = 0.0f;
+    Window::~Window() {
+        Finalize();
+    }
 
-	void AddMouseWheelDelta(float delta) {
-		gMouseWheelDelta += delta;
-	}
+    bool Window::Initialize() {
+        if (hwnd_ != nullptr) {
+            return true;
+        }
 
-	float ConsumeMouseWheelDelta() {
-		const float delta = gMouseWheelDelta;
-		gMouseWheelDelta = 0.0f;
-		return delta;
-	}
+        instance_ = GetModuleHandle(nullptr);
 
-	LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
-		if (msg == WM_MOUSEWHEEL) {
-			AddMouseWheelDelta(static_cast<float>(GET_WHEEL_DELTA_WPARAM(wparam)) / WHEEL_DELTA);
-			return 0;
-		}
+        WNDCLASS windowClass{};
+        windowClass.lpfnWndProc = WindowProc;
+        windowClass.lpszClassName = kWindowClassName;
+        windowClass.hInstance = instance_;
+        windowClass.hCursor = LoadCursor(nullptr, IDC_ARROW);
+
+        if (RegisterClass(&windowClass) == 0) {
+            return false;
+        }
+        isClassRegistered_ = true;
+
+        constexpr DWORD kFixedWindowStyle =
+            WS_OVERLAPPEDWINDOW & ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
+        RECT windowRect = { 0, 0, kClientWidth, kClientHeight };
+        if (!AdjustWindowRect(&windowRect, kFixedWindowStyle, FALSE)) {
+            Finalize();
+            return false;
+        }
+
+        hwnd_ = CreateWindow(
+            kWindowClassName,
+            kWindowTitle,
+            kFixedWindowStyle,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            windowRect.right - windowRect.left,
+            windowRect.bottom - windowRect.top,
+            nullptr,
+            nullptr,
+            instance_,
+            this);
+        if (hwnd_ == nullptr) {
+            Finalize();
+            return false;
+        }
+
+        ShowWindow(hwnd_, SW_SHOW);
+        return true;
+    }
+
+    void Window::Finalize() {
+        if (hwnd_ != nullptr) {
+            DestroyWindow(hwnd_);
+            hwnd_ = nullptr;
+        }
+
+        if (isClassRegistered_) {
+            UnregisterClass(kWindowClassName, instance_);
+            isClassRegistered_ = false;
+        }
+
+        instance_ = nullptr;
+        mouseWheelDelta_ = 0.0f;
+    }
+
+    bool Window::ProcessMessages() {
+        MSG message{};
+        while (PeekMessage(&message, nullptr, 0, 0, PM_REMOVE)) {
+            if (message.message == WM_QUIT) {
+                return false;
+            }
+
+            TranslateMessage(&message);
+            DispatchMessage(&message);
+        }
+
+        return true;
+    }
+
+    float Window::ConsumeMouseWheelDelta() {
+        const float delta = mouseWheelDelta_;
+        mouseWheelDelta_ = 0.0f;
+        return delta;
+    }
+
+    LRESULT CALLBACK Window::WindowProc(
+        HWND hwnd,
+        UINT message,
+        WPARAM wparam,
+        LPARAM lparam) {
+        Window* window = reinterpret_cast<Window*>(
+            GetWindowLongPtr(hwnd, GWLP_USERDATA));
+
+        if (message == WM_NCCREATE) {
+            const CREATESTRUCT* createStruct =
+                reinterpret_cast<const CREATESTRUCT*>(lparam);
+            window = static_cast<Window*>(createStruct->lpCreateParams);
+            SetWindowLongPtr(
+                hwnd,
+                GWLP_USERDATA,
+                reinterpret_cast<LONG_PTR>(window));
+        }
+
+        if (window != nullptr) {
+            return window->HandleMessage(hwnd, message, wparam, lparam);
+        }
+
+        return DefWindowProc(hwnd, message, wparam, lparam);
+    }
+
+    LRESULT Window::HandleMessage(
+        HWND hwnd,
+        UINT message,
+        WPARAM wparam,
+        LPARAM lparam) {
+        if (message == WM_MOUSEWHEEL) {
+            mouseWheelDelta_ +=
+                static_cast<float>(GET_WHEEL_DELTA_WPARAM(wparam)) /
+                WHEEL_DELTA;
+            return 0;
+        }
 
 #ifdef USE_IMGUI
-
-		if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wparam, lparam)) {
-			return true;
-		}
-
+        if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wparam, lparam)) {
+            return TRUE;
+        }
 #endif
 
-		switch (msg) {
+        if (message == WM_DESTROY) {
+            hwnd_ = nullptr;
+            PostQuitMessage(0);
+            return 0;
+        }
 
-		case WM_DESTROY:
-
-			PostQuitMessage(0);
-			return 0;
-		}
-
-		return DefWindowProc(hwnd, msg, wparam, lparam);
-	}
-
-
-	HWND CreateGameWindow() {
-		constexpr DWORD kFixedWindowStyle = WS_OVERLAPPEDWINDOW & ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
-
-		WNDCLASS wc{};
-
-		// ウィンドウプロシージャを設定
-		wc.lpfnWndProc = WindowProc;
-		wc.lpszClassName = L"CG2WindowClass";
-		wc.hInstance = GetModuleHandle(nullptr);
-		wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-
-		RegisterClass(&wc);
-
-		// ウィンドウサイズの計算
-		RECT wrc = { 0, 0, kClientWidth, kClientHeight };
-
-		AdjustWindowRect(&wrc, kFixedWindowStyle, false);
-
-		// ウィンドウの生成
-		HWND hwnd = CreateWindow(
-			wc.lpszClassName,
-			L"LE2A_25_マツムラ_ユホン",
-			kFixedWindowStyle,
-			CW_USEDEFAULT,
-			CW_USEDEFAULT,
-			wrc.right - wrc.left,
-			wrc.bottom - wrc.top,
-			nullptr,
-			nullptr,
-			wc.hInstance,
-			nullptr);
-
-		// ウィンドウを表示する
-		ShowWindow(hwnd, SW_SHOW);
-
-		return hwnd;
-	}
+        return DefWindowProc(hwnd, message, wparam, lparam);
+    }
 
 }

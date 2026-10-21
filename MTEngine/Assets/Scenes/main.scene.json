@@ -23,12 +23,78 @@
             }
         },
         {
-            "id": 4,
+            "id": 5,
             "modelPath": "C:\\Projects\\CG2\\DirectXGame\\MTEngine\\Assets\\Resources\\plane.obj",
-            "name": "New Object",
+            "name": "plane2",
             "transform": {
                 "position": [
+                    -18.299999237060547,
                     0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    3.1415927410125732,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "id": 6,
+            "modelPath": "C:\\Projects\\CG2\\DirectXGame\\MTEngine\\Assets\\Resources\\plane.obj",
+            "name": "plane3",
+            "transform": {
+                "position": [
+                    -10.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    3.1415927410125732,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "id": 7,
+            "modelPath": "C:\\Projects\\CG2\\DirectXGame\\MTEngine\\Assets\\Resources\\plane.obj",
+            "name": "plane4",
+            "transform": {
+                "position": [
+                    -3.9000000953674316,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    3.1415927410125732,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "id": 8,
+            "modelPath": "C:\\Projects\\CG2\\DirectXGame\\MTEngine\\Assets\\Resources\\plane.obj",
+            "name": "plane5",
+            "transform": {
+                "position": [
+                    9.5,
                     0.0,
                     0.0
                 ],

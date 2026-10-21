@@ -3,6 +3,9 @@
 #include "MTEngine/Engine/Debug/DebugCamera.h"
 #include "MTEngine/Engine/Scene/Scene.h"
 
+#include <cstdio>
+#include <utility>
+
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_internal.h"
@@ -16,6 +19,20 @@ namespace MTEngine {
         sceneTextureHandle_ = sceneTextureHandle;
         debugCamera_ = debugCamera;
 		scene_ = scene;
+    }
+
+    void BaseEditor::RegisterGameObject(
+        const std::string& name,
+        std::function<void()> drawInspector) {
+        gameObjects_.push_back({ name, std::move(drawInspector) });
+    }
+
+    void BaseEditor::SetSelectedObjectName(const std::string& name) {
+        std::snprintf(
+            selectedObjectName_,
+            sizeof(selectedObjectName_),
+            "%s",
+            name.c_str());
     }
 
     void BaseEditor::Update() {
@@ -61,6 +78,8 @@ namespace MTEngine {
 
                 isDebugCameraSelected_ = true;
                 selectedObjectId_ = 0;
+                selectedGameObjectIndex_ = 0;
+                SetSelectedObjectName("");
             }
             ImGui::TreePop();
         }
@@ -103,6 +122,8 @@ namespace MTEngine {
                     newModelPath_);
 
                 isDebugCameraSelected_ = false;
+                selectedGameObjectIndex_ = 0;
+                SetSelectedObjectName(newObjectName_);
 
                 ImGui::CloseCurrentPopup();
             }
@@ -145,6 +166,8 @@ namespace MTEngine {
 
                     selectedObjectId_ = object.id;
                     isDebugCameraSelected_ = false;
+                    selectedGameObjectIndex_ = 0;
+                    SetSelectedObjectName(object.name);
                 }
             }
 
@@ -158,6 +181,13 @@ namespace MTEngine {
                     if (duplicatedObjectId != 0) {
                         selectedObjectId_ = duplicatedObjectId;
                         isDebugCameraSelected_ = false;
+                        selectedGameObjectIndex_ = 0;
+
+                        const SceneObject* duplicatedObject =
+                            scene_->FindObject(duplicatedObjectId);
+                        if (duplicatedObject) {
+                            SetSelectedObjectName(duplicatedObject->name);
+                        }
                     }
                 }
 
@@ -168,7 +198,34 @@ namespace MTEngine {
 
                     selectedObjectId_ = 0;
                     isDebugCameraSelected_ = true;
+                    selectedGameObjectIndex_ = 0;
+                    SetSelectedObjectName("");
                 }
+            }
+        }
+
+        ImGui::Spacing();
+        ImGui::TextDisabled("Game Objects");
+        ImGui::Separator();
+
+        if (gameObjects_.empty()) {
+            ImGui::TextDisabled("No registered game objects");
+        }
+
+        for (size_t index = 0; index < gameObjects_.size(); ++index) {
+            const size_t selectionIndex = index + 1;
+            const std::string label =
+                gameObjects_[index].name +
+                "##GameObject" +
+                std::to_string(selectionIndex);
+
+            if (ImGui::Selectable(
+                label.c_str(),
+                selectedGameObjectIndex_ == selectionIndex)) {
+                selectedGameObjectIndex_ = selectionIndex;
+                selectedObjectId_ = 0;
+                isDebugCameraSelected_ = false;
+                SetSelectedObjectName(gameObjects_[index].name);
             }
         }
 
@@ -233,7 +290,14 @@ namespace MTEngine {
 
             if (selectedObject) {
            
-                ImGui::Text("%s", selectedObject->name.c_str());
+                if (ImGui::InputText(
+                    "Name",
+                    selectedObjectName_,
+                    sizeof(selectedObjectName_)) &&
+                    selectedObjectName_[0] != '\0') {
+                    selectedObject->name = selectedObjectName_;
+                }
+
                 ImGui::TextDisabled(
                     "ID: %llu",
                     static_cast<unsigned long long>(selectedObject->id));
@@ -298,6 +362,23 @@ namespace MTEngine {
                 ImGui::TextDisabled("No object selected");
             }
 
+        } else if (
+            selectedGameObjectIndex_ > 0 &&
+            selectedGameObjectIndex_ <= gameObjects_.size()) {
+            GameObjectEntry& selectedObject =
+                gameObjects_[selectedGameObjectIndex_ - 1];
+
+            if (ImGui::InputText(
+                "Name",
+                selectedObjectName_,
+                sizeof(selectedObjectName_)) &&
+                selectedObjectName_[0] != '\0') {
+                selectedObject.name = selectedObjectName_;
+            }
+            ImGui::Separator();
+            if (selectedObject.drawInspector) {
+                selectedObject.drawInspector();
+            }
         } else {
             ImGui::TextDisabled("No object selected");
         }

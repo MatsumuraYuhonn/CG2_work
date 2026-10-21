@@ -119,8 +119,8 @@ namespace MTEngine {
         viewMatrix = Inverse(cameraMatrix);
         projectionMatrix = MakePerspectiveFovMatrix(
             0.45f,
-            static_cast<float>(kClientWidth) /
-                static_cast<float>(kClientHeight),
+            static_cast<float>(Window::kClientWidth) /
+                static_cast<float>(Window::kClientHeight),
             0.1f,
             1000.0f);
     }

@@ -64,6 +64,7 @@ namespace MTEngine {
 
 		Input* GetInput() const { return input_.get(); }
 		Renderer* GetRenderer() const { return renderer_.get(); }
+		BaseEditor* GetEditor() const { return editor_.get(); }
 		AudioManager* GetAudioManager() const { return audioManager_.get(); }
 		DebugCamera& GetDebugCamera() { return debugCamera_; }
 		ID3D12Device* GetDevice() const { return dx12Device_.GetDevice().Get(); }
@@ -79,12 +80,12 @@ namespace MTEngine {
 		void Update();
 		void Draw();
 
-		HWND hwnd_ = nullptr;
 		bool isInitialized_ = false;
 		std::unique_ptr<Input> input_;
 
 		// 最後に破棄されるよう、DirectX オブジェクトより前に宣言する。
 		D3DResourceLeakChecker leakCheck_;
+		Window window_;
 		Dx12Device dx12Device_;
 		SwapChain swapChain_;
 		std::unique_ptr<ShaderCompiler> shaderCompiler_;

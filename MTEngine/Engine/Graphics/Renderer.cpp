@@ -177,7 +177,7 @@ namespace MTEngine {
         commandList->RSSetViewports(1, &viewport_);
         commandList->RSSetScissorRects(1, &scissorRect_);
 
-        pipelineManager_->Bind(commandList);
+        pipelineManager_->Bind(commandList.Get(), blendMode_);
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         ID3D12DescriptorHeap* descriptorHeaps[] = { srvHeapManager_.GetHeap() };
@@ -186,6 +186,7 @@ namespace MTEngine {
 
     void Renderer::BeginScene() {
         auto commandList = dx12Device_->GetCommandList();
+        blendMode_ = BlendMode::kBlendModeNormal;
 
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -203,7 +204,7 @@ namespace MTEngine {
         commandList->ClearDepthStencilView(sceneDsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
         commandList->RSSetViewports(1, &viewport_);
         commandList->RSSetScissorRects(1, &scissorRect_);
-        pipelineManager_->Bind(commandList);
+        pipelineManager_->Bind(commandList.Get(), blendMode_);
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     }
 
@@ -289,6 +290,11 @@ namespace MTEngine {
 
         hr = commandList->Reset(commandAllocator.Get(), nullptr);
         assert(SUCCEEDED(hr));
+    }
+
+    void Renderer::SetBlendMode(BlendMode blendMode) {
+        blendMode_ = blendMode;
+        pipelineManager_->Bind(dx12Device_->GetCommandList().Get(), blendMode_);
     }
 
 }
