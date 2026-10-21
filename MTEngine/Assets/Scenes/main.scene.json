@@ -109,6 +109,28 @@
                     1.0
                 ]
             }
+        },
+        {
+            "id": 9,
+            "modelPath": "C:\\Projects\\CG2\\DirectXGame\\MTEngine\\Assets\\Resources\\plane.obj",
+            "name": "plane7",
+            "transform": {
+                "position": [
+                    2.200000047683716,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    3.1415927410125732,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
         }
     ]
 }
