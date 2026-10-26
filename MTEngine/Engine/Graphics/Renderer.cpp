@@ -1,5 +1,8 @@
 #include "Renderer.h"
 
+#include <chrono>
+#include <thread>
+
 namespace MTEngine {
 
     void Renderer::Initialize(Dx12Device* dx12Device, SwapChain* swapChain, PipelineManager* pipelineManager, int32_t width, int32_t height) {
@@ -72,6 +75,8 @@ namespace MTEngine {
         scissorRect_.right = width;
         scissorRect_.top = 0;
         scissorRect_.bottom = height;
+
+        reference_ = std::chrono::steady_clock::now();
     }
 
     void Renderer::CreateDepthStencilTexture(int32_t width, int32_t height) {
@@ -284,12 +289,27 @@ namespace MTEngine {
 
         swapChain_->Present(1, 0);
         dx12Device_->WaitForGPU();
+        UpdateFixFPS();
 
         hr = commandAllocator->Reset();
         assert(SUCCEEDED(hr));
 
         hr = commandList->Reset(commandAllocator.Get(), nullptr);
         assert(SUCCEEDED(hr));
+    }
+
+    void Renderer::UpdateFixFPS() {
+        using namespace std::chrono;
+
+        constexpr microseconds kFrameDuration(1000000 / 60);
+        const steady_clock::time_point targetTime =
+            reference_ + kFrameDuration;
+
+        while (steady_clock::now() < targetTime) {
+            std::this_thread::sleep_for(microseconds(1));
+        }
+
+        reference_ = steady_clock::now();
     }
 
     void Renderer::SetBlendMode(BlendMode blendMode) {

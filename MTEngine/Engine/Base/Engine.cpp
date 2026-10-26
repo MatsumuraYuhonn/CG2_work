@@ -4,9 +4,12 @@
 #include <cassert>
 #include <cstdlib>
 #include <filesystem>
+#include <mmsystem.h>
 #include <string>
 
 #include "MTEngine/Engine/Debug/Logger.h"
+
+#pragma comment(lib, "winmm.lib")
 
 namespace MTEngine {
     namespace {
@@ -91,6 +94,9 @@ namespace MTEngine {
                 MB_OK | MB_ICONERROR);
             ExitProcess(EXIT_FAILURE);
         }
+
+        timerPeriodEnabled_ =
+            timeBeginPeriod(1) == TIMERR_NOERROR;
 
         const HRESULT comResult = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
         assert(SUCCEEDED(comResult));
@@ -272,6 +278,10 @@ namespace MTEngine {
         input_.reset();
 
         window_.Finalize();
+        if (timerPeriodEnabled_) {
+            timeEndPeriod(1);
+            timerPeriodEnabled_ = false;
+        }
         CoUninitialize();
         isInitialized_ = false;
     }

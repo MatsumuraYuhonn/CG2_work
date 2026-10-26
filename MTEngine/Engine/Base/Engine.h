@@ -2,12 +2,12 @@
 
 #include <Windows.h>
 #include <d3d12.h>
-#include <dxgidebug.h>
 #include <memory>
 #include <wrl.h>
 
 #include "MTEngine/Engine/Audio/AudioManager.h"
 #include "MTEngine/Engine/Base/CrashHandler.h"
+#include "MTEngine/Engine/Base/D3DResourceLeakChecker.h"
 #include "MTEngine/Engine/Base/Dx12Device.h"
 #include "MTEngine/Engine/Base/ShaderCompiler.h"
 #include "MTEngine/Engine/Base/SwapChain.h"
@@ -24,17 +24,6 @@
 #pragma comment(lib, "dxcompiler.lib")
 
 namespace MTEngine {
-
-    struct D3DResourceLeakChecker {
-        ~D3DResourceLeakChecker() {
-            Microsoft::WRL::ComPtr<IDXGIDebug1> debug;
-            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
-                debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
-                debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
-                debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
-            }
-        }
-    };
 
     // Sprite / TextureManager が共通で利用するアップロードバッファ生成関数。
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(
@@ -81,6 +70,7 @@ namespace MTEngine {
         Window window_;
         Scene scene_;
         bool isInitialized_ = false;
+        bool timerPeriodEnabled_ = false;
         std::unique_ptr<Input> input_;
 
         // 最後に破棄されるよう、DirectX オブジェクトより前に宣言する。

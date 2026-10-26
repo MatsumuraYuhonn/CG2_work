@@ -2,6 +2,7 @@
 #include <d3d12.h>
 #include <wrl.h>
 #include <cassert>
+#include <chrono>
 #include <memory>
 #include "MTEngine/Engine/Base/Dx12Device.h"
 #include "MTEngine/Engine/Base/SwapChain.h"
@@ -39,6 +40,7 @@ namespace MTEngine {
     private:
         void CreateDepthStencilTexture(int32_t width, int32_t height);
         void CreateSceneRenderTarget(int32_t width, int32_t height);
+        void UpdateFixFPS();
 
         Dx12Device* dx12Device_ = nullptr;
         SwapChain* swapChain_ = nullptr;
@@ -57,6 +59,7 @@ namespace MTEngine {
         D3D12_VIEWPORT viewport_{};
         D3D12_RECT scissorRect_{};
         BlendMode blendMode_ = BlendMode::kBlendModeNormal;
+        std::chrono::steady_clock::time_point reference_{};
     };
 
 }

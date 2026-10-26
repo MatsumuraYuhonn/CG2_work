@@ -13,4 +13,4 @@ spelling_exclusion_path = ./exclusion.dic
 
 [externals/**]
 
-generated_cade = true;
+generated_code = true

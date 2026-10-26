@@ -167,6 +167,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClInclude Include="MTEngine\Engine\Audio\AudioManager.h" />
     <ClInclude Include="MTEngine\Engine\Audio\Sound.h" />
     <ClInclude Include="MTEngine\Engine\Base\CrashHandler.h" />
+    <ClInclude Include="MTEngine\Engine\Base\D3DResourceLeakChecker.h" />
     <ClInclude Include="MTEngine\Engine\Base\Dx12Device.h" />
     <ClInclude Include="MTEngine\Engine\Base\Engine.h" />
     <ClInclude Include="MTEngine\Engine\Base\ShaderCompiler.h" />
@@ -208,6 +209,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClCompile Include="MTEngine\Engine\Audio\AudioManager.cpp" />
     <ClCompile Include="MTEngine\Engine\Audio\Sound.cpp" />
     <ClCompile Include="MTEngine\Engine\Base\CrashHandler.cpp" />
+    <ClCompile Include="MTEngine\Engine\Base\D3DResourceLeakChecker.cpp" />
     <ClCompile Include="MTEngine\Engine\Base\Dx12Device.cpp" />
     <ClCompile Include="MTEngine\Engine\Base\Engine.cpp" />
     <ClCompile Include="MTEngine\Engine\Base\ShaderCompiler.cpp" />

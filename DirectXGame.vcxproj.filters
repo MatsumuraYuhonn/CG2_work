@@ -51,6 +51,9 @@
     <ClInclude Include="MTEngine\Engine\Base\CrashHandler.h">
       <Filter>Engine\Base</Filter>
     </ClInclude>
+    <ClInclude Include="MTEngine\Engine\Base\D3DResourceLeakChecker.h">
+      <Filter>Engine\Base</Filter>
+    </ClInclude>
     <ClInclude Include="MTEngine\Engine\Base\Dx12Device.h">
       <Filter>Engine\Base</Filter>
     </ClInclude>
@@ -171,6 +174,9 @@
       <Filter>Engine\Audio</Filter>
     </ClCompile>
     <ClCompile Include="MTEngine\Engine\Base\CrashHandler.cpp">
+      <Filter>Engine\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="MTEngine\Engine\Base\D3DResourceLeakChecker.cpp">
       <Filter>Engine\Base</Filter>
     </ClCompile>
     <ClCompile Include="MTEngine\Engine\Base\Dx12Device.cpp">
