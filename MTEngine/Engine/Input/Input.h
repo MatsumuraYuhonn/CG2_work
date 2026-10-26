@@ -13,6 +13,8 @@
 // キー入力管理クラス（キーボード + ゲームパッド）
 namespace MTEngine {
 
+    class Window;
+
     class Input {
     public:
         Input() = default;
@@ -22,7 +24,7 @@ namespace MTEngine {
         Input& operator=(const Input&) = delete;
 
         // DirectInput・XInputの初期化
-        void Initialize(HINSTANCE hInstance, HWND hwnd);
+        void Initialize(Window* window);
         // 入力状態の更新（キーボード・ゲームパッド両方）
         void Update();
 
@@ -38,6 +40,8 @@ namespace MTEngine {
         const GamePad* GetGamePad() const { return gamePad_.get(); }
 
     private:
+        Window* window_ = nullptr;
+
         Microsoft::WRL::ComPtr<IDirectInput8> directInput_ = nullptr;
         Microsoft::WRL::ComPtr<IDirectInputDevice8> keyboard_ = nullptr;
 

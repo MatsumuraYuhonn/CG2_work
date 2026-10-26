@@ -113,7 +113,7 @@ namespace MTEngine {
 
         const HWND hwnd = window_.GetHwnd();
         input_ = std::make_unique<Input>();
-        input_->Initialize(GetModuleHandle(nullptr), hwnd);
+        input_->Initialize(&window_);
 
 #ifdef _DEBUG
         Microsoft::WRL::ComPtr<ID3D12Debug1> debugController;

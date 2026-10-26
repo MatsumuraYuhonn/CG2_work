@@ -36,6 +36,7 @@ namespace MTEngine {
         bool ProcessMessages();
 
         HWND GetHwnd() const { return hwnd_; }
+        HINSTANCE GetHInstance() const { return instance_; }
         float ConsumeMouseWheelDelta();
 
     private:

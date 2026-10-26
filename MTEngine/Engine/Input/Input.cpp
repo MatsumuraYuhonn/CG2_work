@@ -1,4 +1,5 @@
 #include "Input.h"
+#include "../Base/Window.h"
 #include <cassert>
 #include <algorithm> 
 #include <cstring>
@@ -14,8 +15,10 @@ namespace MTEngine {
         }
     }
 
-    void Input::Initialize(HINSTANCE hInstance, HWND hwnd) {
-        HRESULT hr = DirectInput8Create(hInstance, DIRECTINPUT_VERSION,
+    void Input::Initialize(Window* window) {
+        window_ = window;
+
+        HRESULT hr = DirectInput8Create(window_->GetHInstance(), DIRECTINPUT_VERSION,
             IID_IDirectInput8, (void**)&directInput_, nullptr);
         assert(SUCCEEDED(hr));
 
@@ -25,7 +28,7 @@ namespace MTEngine {
         hr = keyboard_->SetDataFormat(&c_dfDIKeyboard);
         assert(SUCCEEDED(hr));
 
-        hr = keyboard_->SetCooperativeLevel(hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
+        hr = keyboard_->SetCooperativeLevel(window_->GetHwnd(), DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
         assert(SUCCEEDED(hr));
 
         // 初回クリア
