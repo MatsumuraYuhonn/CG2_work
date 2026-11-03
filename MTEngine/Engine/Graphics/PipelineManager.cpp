@@ -78,7 +78,7 @@ namespace MTEngine {
         descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
         // ルートパラメータの設定
-        D3D12_ROOT_PARAMETER rootParameters[4] = {};
+        D3D12_ROOT_PARAMETER rootParameters[5] = {};
         rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
         rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
         rootParameters[0].Descriptor.ShaderRegister = 0;
@@ -95,6 +95,11 @@ namespace MTEngine {
         rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
         rootParameters[3].DescriptorTable.pDescriptorRanges = descriptorRange;
         rootParameters[3].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange); // t0
+
+        // インスタンスごとの変換行列を格納するStructuredBuffer。通常描画では未使用。
+        rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+        rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+        rootParameters[4].Descriptor.ShaderRegister = 1; // t1
 
         descriptionRootSignature.pParameters = rootParameters;
         descriptionRootSignature.NumParameters = _countof(rootParameters);
@@ -158,6 +163,12 @@ namespace MTEngine {
         Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = shaderCompiler->Compile(L"MTEngine/Assets/Shaders/object3d.VS.hlsl", L"vs_6_0");
         assert(vertexShaderBlob != nullptr);
 
+        Microsoft::WRL::ComPtr<IDxcBlob> instancedVertexShaderBlob =
+            shaderCompiler->Compile(
+                L"MTEngine/Assets/Shaders/Object3dInstanced.VS.hlsl",
+                L"vs_6_0");
+        assert(instancedVertexShaderBlob != nullptr);
+
         Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = shaderCompiler->Compile(L"MTEngine/Assets/Shaders/object3d.PS.hlsl", L"ps_6_0");
         assert(pixelShaderBlob != nullptr);
 
@@ -190,7 +201,33 @@ namespace MTEngine {
                 &graphicsPipelineStateDesc,
                 IID_PPV_ARGS(&graphicsPipelineStates_[index]));
             assert(SUCCEEDED(hr));
+
+            graphicsPipelineStateDesc.VS = {
+                instancedVertexShaderBlob->GetBufferPointer(),
+                instancedVertexShaderBlob->GetBufferSize()
+            };
+            hr = device->CreateGraphicsPipelineState(
+                &graphicsPipelineStateDesc,
+                IID_PPV_ARGS(&instancedGraphicsPipelineStates_[index]));
+            assert(SUCCEEDED(hr));
+
+            graphicsPipelineStateDesc.VS = {
+                vertexShaderBlob->GetBufferPointer(),
+                vertexShaderBlob->GetBufferSize()
+            };
         }
+    }
+
+    void PipelineManager::BindInstanced(
+        ID3D12GraphicsCommandList* commandList,
+        BlendMode blendMode) {
+        assert(commandList != nullptr);
+        const size_t index = static_cast<size_t>(blendMode);
+        assert(index < kBlendModeCount);
+
+        commandList->SetGraphicsRootSignature(rootSignature_.Get());
+        commandList->SetPipelineState(
+            instancedGraphicsPipelineStates_[index].Get());
     }
 
     void PipelineManager::Bind(
@@ -209,6 +246,13 @@ namespace MTEngine {
         const size_t index = static_cast<size_t>(blendMode);
         assert(index < kBlendModeCount);
         return graphicsPipelineStates_[index].Get();
+    }
+
+    ID3D12PipelineState* PipelineManager::GetInstancedPipelineState(
+        BlendMode blendMode) const {
+        const size_t index = static_cast<size_t>(blendMode);
+        assert(index < kBlendModeCount);
+        return instancedGraphicsPipelineStates_[index].Get();
     }
 
 }

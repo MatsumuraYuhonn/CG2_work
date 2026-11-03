@@ -33,7 +33,14 @@ namespace MTEngine {
             std::function<void()> drawInspector;
         };
 
+        struct ModelAssetEntry {
+            std::string displayName;
+            std::string modelPath;
+        };
+
         void SetSelectedObjectName(const std::string& name);
+        void RefreshModelAssets();
+        void SelectModelAsset(size_t index);
 
         D3D12_GPU_DESCRIPTOR_HANDLE sceneTextureHandle_{};
         
@@ -52,6 +59,8 @@ namespace MTEngine {
         char selectedObjectName_[128] = "";
 
         std::vector<GameObjectEntry> gameObjects_;
+        std::vector<ModelAssetEntry> modelAssets_;
+        int selectedModelAssetIndex_ = -1;
 
     };
 
