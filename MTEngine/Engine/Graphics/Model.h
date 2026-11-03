@@ -49,6 +49,10 @@ namespace MTEngine {
         void DrawTextured(
             Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList,
             TextureManager* textureManager);
+        void DrawTexturedInstanced(
+            Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList,
+            TextureManager* textureManager,
+            UINT instanceCount);
 
         struct MeshResource {
             Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;

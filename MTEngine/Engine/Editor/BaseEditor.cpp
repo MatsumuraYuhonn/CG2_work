@@ -3,7 +3,11 @@
 #include "MTEngine/Engine/Debug/DebugCamera.h"
 #include "MTEngine/Engine/Scene/Scene.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdio>
+#include <filesystem>
+#include <system_error>
 #include <utility>
 
 #ifdef USE_IMGUI
@@ -13,12 +17,20 @@
 
 namespace MTEngine {
 
+    namespace {
+
+        constexpr const char* kModelAssetDirectory =
+            "MTEngine/Assets/Resources";
+
+    }
+
     void BaseEditor::Initialize(
         D3D12_GPU_DESCRIPTOR_HANDLE sceneTextureHandle,
         DebugCamera* debugCamera, Scene* scene) {
         sceneTextureHandle_ = sceneTextureHandle;
         debugCamera_ = debugCamera;
 		scene_ = scene;
+        RefreshModelAssets();
     }
 
     void BaseEditor::RegisterGameObject(
@@ -33,6 +45,71 @@ namespace MTEngine {
             sizeof(selectedObjectName_),
             "%s",
             name.c_str());
+    }
+
+    void BaseEditor::RefreshModelAssets() {
+        modelAssets_.clear();
+        selectedModelAssetIndex_ = -1;
+
+        const std::filesystem::path assetDirectory(kModelAssetDirectory);
+        std::error_code error;
+        std::filesystem::recursive_directory_iterator iterator(
+            assetDirectory,
+            std::filesystem::directory_options::skip_permission_denied,
+            error);
+        const std::filesystem::recursive_directory_iterator end;
+
+        while (!error && iterator != end) {
+            const std::filesystem::directory_entry& entry = *iterator;
+            if (entry.is_regular_file(error)) {
+                std::string extension = entry.path().extension().string();
+                std::transform(
+                    extension.begin(),
+                    extension.end(),
+                    extension.begin(),
+                    [](unsigned char character) {
+                        return static_cast<char>(std::tolower(character));
+                    });
+
+                if (extension == ".obj") {
+                    ModelAssetEntry modelAsset;
+                    modelAsset.displayName = entry.path()
+                        .lexically_relative(assetDirectory)
+                        .generic_string();
+                    modelAsset.modelPath = entry.path().generic_string();
+                    modelAssets_.push_back(std::move(modelAsset));
+                }
+            }
+
+            iterator.increment(error);
+        }
+
+        std::sort(
+            modelAssets_.begin(),
+            modelAssets_.end(),
+            [](const ModelAssetEntry& left, const ModelAssetEntry& right) {
+                return left.displayName < right.displayName;
+            });
+
+        for (size_t index = 0; index < modelAssets_.size(); ++index) {
+            if (modelAssets_[index].modelPath == newModelPath_) {
+                selectedModelAssetIndex_ = static_cast<int>(index);
+                break;
+            }
+        }
+    }
+
+    void BaseEditor::SelectModelAsset(size_t index) {
+        if (index >= modelAssets_.size()) {
+            return;
+        }
+
+        selectedModelAssetIndex_ = static_cast<int>(index);
+        std::snprintf(
+            newModelPath_,
+            sizeof(newModelPath_),
+            "%s",
+            modelAssets_[index].modelPath.c_str());
     }
 
     void BaseEditor::Update() {
@@ -90,6 +167,7 @@ namespace MTEngine {
         ImGui::Separator();
 
         if (scene_ && ImGui::Button("+ Add Object")) {
+            RefreshModelAssets();
             ImGui::OpenPopup("Add Scene Object");
         }
 
@@ -103,8 +181,46 @@ namespace MTEngine {
                 newObjectName_,
                 sizeof(newObjectName_));
 
+            const char* modelPreview = "Select OBJ...";
+            if (selectedModelAssetIndex_ >= 0 &&
+                selectedModelAssetIndex_ <
+                    static_cast<int>(modelAssets_.size())) {
+
+                modelPreview = modelAssets_[selectedModelAssetIndex_]
+                    .displayName.c_str();
+            }
+
+            if (ImGui::BeginCombo("Model", modelPreview)) {
+                for (size_t index = 0; index < modelAssets_.size(); ++index) {
+                    const bool isSelected =
+                        selectedModelAssetIndex_ == static_cast<int>(index);
+
+                    if (ImGui::Selectable(
+                        modelAssets_[index].displayName.c_str(),
+                        isSelected)) {
+
+                        SelectModelAsset(index);
+                    }
+
+                    if (isSelected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            if (modelAssets_.empty()) {
+                ImGui::TextDisabled(
+                    "No OBJ files in %s",
+                    kModelAssetDirectory);
+            }
+
+            if (ImGui::Button("Refresh Models")) {
+                RefreshModelAssets();
+            }
+
             ImGui::InputText(
-                "Model Path",
+                "Model Path (Manual)",
                 newModelPath_,
                 sizeof(newModelPath_));
 

@@ -182,7 +182,8 @@ namespace MTEngine {
         const bool isSceneRendererInitialized =
             sceneRenderer_->Initialize(
                 device,
-                renderer_->GetSrvHeapManager());
+                renderer_->GetSrvHeapManager(),
+                pipelineManager_.get());
         assert(isSceneRendererInitialized);
 
         audioManager_ = std::make_unique<AudioManager>();

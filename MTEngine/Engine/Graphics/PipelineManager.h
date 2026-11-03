@@ -34,11 +34,19 @@ namespace MTEngine {
             ID3D12GraphicsCommandList* commandList,
             BlendMode blendMode);
 
+        // インスタンシング描画用のPSOをバインドする。
+        void BindInstanced(
+            ID3D12GraphicsCommandList* commandList,
+            BlendMode blendMode);
+
         // ルートシグネチャを取得
         ID3D12RootSignature* GetRootSignature() const { return rootSignature_.Get(); }
 
         // PSOを取得
         ID3D12PipelineState* GetPipelineState(BlendMode blendMode) const;
+
+        ID3D12PipelineState* GetInstancedPipelineState(
+            BlendMode blendMode) const;
 
     private:
         static constexpr size_t kBlendModeCount =
@@ -48,6 +56,9 @@ namespace MTEngine {
         std::array<
             Microsoft::WRL::ComPtr<ID3D12PipelineState>,
             kBlendModeCount> graphicsPipelineStates_{};
+        std::array<
+            Microsoft::WRL::ComPtr<ID3D12PipelineState>,
+            kBlendModeCount> instancedGraphicsPipelineStates_{};
     };
 
 }

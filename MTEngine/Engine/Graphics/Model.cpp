@@ -289,6 +289,52 @@ namespace MTEngine {
         }
     }
 
+    void Model::DrawTexturedInstanced(
+        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList,
+        TextureManager* textureManager,
+        UINT instanceCount) {
+
+        if (instanceCount == 0) {
+            return;
+        }
+
+        for (auto& mesh : meshResources_) {
+            if (!mesh.materialBuffer) {
+                continue;
+            }
+
+            int32_t useTexture = 0;
+            D3D12_GPU_DESCRIPTOR_HANDLE srvHandle{};
+            if (textureManager && !mesh.textureFilePath.empty()) {
+                if (textureManager->TryGetGPUDescriptorHandle(
+                    mesh.textureFilePath,
+                    srvHandle)) {
+
+                    useTexture = 1;
+                }
+            }
+
+            (*mesh.materialBuffer)->useTexture = useTexture;
+            commandList->SetGraphicsRootConstantBufferView(
+                0,
+                mesh.materialBuffer->GetGPUVirtualAddress());
+
+            if (useTexture != 0) {
+                commandList->SetGraphicsRootDescriptorTable(3, srvHandle);
+            }
+
+            commandList->IASetVertexBuffers(
+                0,
+                1,
+                &mesh.vertexBufferView);
+            commandList->DrawInstanced(
+                mesh.vertexCount,
+                instanceCount,
+                0,
+                0);
+        }
+    }
+
     Microsoft::WRL::ComPtr<ID3D12Resource> Model::CreateBufferResource(Microsoft::WRL::ComPtr<ID3D12Device> device, size_t sizeInBytes) {
         D3D12_HEAP_PROPERTIES uploadHeapProperties{};
         uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
