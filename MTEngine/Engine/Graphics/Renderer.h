@@ -31,6 +31,16 @@ namespace MTEngine {
         // 以降の描画で使用するブレンドモードを設定する。
         void SetBlendMode(BlendMode blendMode);
 
+        // ブレンドモードと深度書き込みモードを同時に設定する。
+        void SetPipelineState(
+            BlendMode blendMode,
+            DepthWriteMode depthWriteMode);
+
+        // パーティクルのインスタンシング描画用パイプラインを設定する。
+        void SetParticlePipelineState(
+            BlendMode blendMode,
+            DepthWriteMode depthWriteMode);
+
         // 各種ゲッター
         ID3D12GraphicsCommandList* GetCommandList() const { return dx12Device_->GetCommandList().Get(); }
         DescriptorHeapManager* GetSrvHeapManager() { return &srvHeapManager_; }
@@ -57,6 +67,7 @@ namespace MTEngine {
         D3D12_VIEWPORT viewport_{};
         D3D12_RECT scissorRect_{};
         BlendMode blendMode_ = BlendMode::kBlendModeNormal;
+        DepthWriteMode depthWriteMode_ = DepthWriteMode::kEnable;
     };
 
 }

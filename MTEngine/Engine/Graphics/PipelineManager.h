@@ -18,6 +18,12 @@ namespace MTEngine {
         kCountOfBlendMode
     };
 
+    enum class DepthWriteMode {
+        kEnable,
+        kDisable,
+        kCount
+    };
+
     class PipelineManager {
     public:
         PipelineManager() = default;
@@ -32,18 +38,22 @@ namespace MTEngine {
         // commandList: 使用するグラフィックスコマンドリスト
         void Bind(
             ID3D12GraphicsCommandList* commandList,
-            BlendMode blendMode);
+            BlendMode blendMode,
+            DepthWriteMode depthWriteMode);
 
-        // インスタンシング描画用のPSOをバインドする。
-        void BindInstanced(
+        // パーティクル用のインスタンシング描画パイプラインをバインドする。
+        void BindParticle(
             ID3D12GraphicsCommandList* commandList,
-            BlendMode blendMode);
+            BlendMode blendMode,
+            DepthWriteMode depthWriteMode);
 
         // ルートシグネチャを取得
         ID3D12RootSignature* GetRootSignature() const { return rootSignature_.Get(); }
 
         // PSOを取得
-        ID3D12PipelineState* GetPipelineState(BlendMode blendMode) const;
+        ID3D12PipelineState* GetPipelineState(
+            BlendMode blendMode,
+            DepthWriteMode depthWriteMode) const;
 
         ID3D12PipelineState* GetInstancedPipelineState(
             BlendMode blendMode) const;
@@ -51,14 +61,22 @@ namespace MTEngine {
     private:
         static constexpr size_t kBlendModeCount =
             static_cast<size_t>(BlendMode::kCountOfBlendMode);
+        static constexpr size_t kDepthWriteModeCount =
+            static_cast<size_t>(DepthWriteMode::kCount);
 
         Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature_ = nullptr;
+        Microsoft::WRL::ComPtr<ID3D12RootSignature>
+            particleRootSignature_ = nullptr;
         std::array<
-            Microsoft::WRL::ComPtr<ID3D12PipelineState>,
+            std::array<
+                Microsoft::WRL::ComPtr<ID3D12PipelineState>,
+                kDepthWriteModeCount>,
             kBlendModeCount> graphicsPipelineStates_{};
         std::array<
-            Microsoft::WRL::ComPtr<ID3D12PipelineState>,
-            kBlendModeCount> instancedGraphicsPipelineStates_{};
+            std::array<
+                Microsoft::WRL::ComPtr<ID3D12PipelineState>,
+                kDepthWriteModeCount>,
+            kBlendModeCount> particlePipelineStates_{};
     };
 
 }

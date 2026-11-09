@@ -193,59 +193,218 @@ namespace MTEngine {
         graphicsPipelineStateDesc.DepthStencilState = depthStencilDesc;
         graphicsPipelineStateDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-        for (size_t index = 0; index < kBlendModeCount; ++index) {
-            const BlendMode blendMode = static_cast<BlendMode>(index);
+        for (size_t blendIndex = 0;
+            blendIndex < kBlendModeCount;
+            ++blendIndex) {
+            const BlendMode blendMode =
+                static_cast<BlendMode>(blendIndex);
             graphicsPipelineStateDesc.BlendState = CreateBlendDesc(blendMode);
 
-            hr = device->CreateGraphicsPipelineState(
-                &graphicsPipelineStateDesc,
-                IID_PPV_ARGS(&graphicsPipelineStates_[index]));
-            assert(SUCCEEDED(hr));
+            for (size_t depthWriteIndex = 0;
+                depthWriteIndex < kDepthWriteModeCount;
+                ++depthWriteIndex) {
+                const DepthWriteMode depthWriteMode =
+                    static_cast<DepthWriteMode>(depthWriteIndex);
 
-            graphicsPipelineStateDesc.VS = {
-                instancedVertexShaderBlob->GetBufferPointer(),
-                instancedVertexShaderBlob->GetBufferSize()
-            };
-            hr = device->CreateGraphicsPipelineState(
-                &graphicsPipelineStateDesc,
-                IID_PPV_ARGS(&instancedGraphicsPipelineStates_[index]));
-            assert(SUCCEEDED(hr));
+                depthStencilDesc.DepthWriteMask =
+                    D3D12_DEPTH_WRITE_MASK_ALL;
+                if (depthWriteMode == DepthWriteMode::kDisable) {
+                    depthStencilDesc.DepthWriteMask =
+                        D3D12_DEPTH_WRITE_MASK_ZERO;
+                }
+                graphicsPipelineStateDesc.DepthStencilState =
+                    depthStencilDesc;
 
-            graphicsPipelineStateDesc.VS = {
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize()
-            };
+                hr = device->CreateGraphicsPipelineState(
+                    &graphicsPipelineStateDesc,
+                    IID_PPV_ARGS(
+                        &graphicsPipelineStates_
+                            [blendIndex][depthWriteIndex]));
+                assert(SUCCEEDED(hr));
+            }
         }
-    }
 
-    void PipelineManager::BindInstanced(
-        ID3D12GraphicsCommandList* commandList,
-        BlendMode blendMode) {
-        assert(commandList != nullptr);
-        const size_t index = static_cast<size_t>(blendMode);
-        assert(index < kBlendModeCount);
+        // パーティクルはインスタンスデータを頂点入力のスロット1から受け取る。
+        D3D12_DESCRIPTOR_RANGE particleDescriptorRange{};
+        particleDescriptorRange.BaseShaderRegister = 0;
+        particleDescriptorRange.NumDescriptors = 1;
+        particleDescriptorRange.RangeType =
+            D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+        particleDescriptorRange.OffsetInDescriptorsFromTableStart =
+            D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-        commandList->SetGraphicsRootSignature(rootSignature_.Get());
-        commandList->SetPipelineState(
-            instancedGraphicsPipelineStates_[index].Get());
+        D3D12_ROOT_PARAMETER particleRootParameters[2]{};
+        particleRootParameters[0].ParameterType =
+            D3D12_ROOT_PARAMETER_TYPE_CBV;
+        particleRootParameters[0].ShaderVisibility =
+            D3D12_SHADER_VISIBILITY_VERTEX;
+        particleRootParameters[0].Descriptor.ShaderRegister = 0;
+        particleRootParameters[1].ParameterType =
+            D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        particleRootParameters[1].ShaderVisibility =
+            D3D12_SHADER_VISIBILITY_PIXEL;
+        particleRootParameters[1].DescriptorTable.pDescriptorRanges =
+            &particleDescriptorRange;
+        particleRootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
+
+        D3D12_ROOT_SIGNATURE_DESC particleRootSignatureDesc{};
+        particleRootSignatureDesc.Flags =
+            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+        particleRootSignatureDesc.pParameters = particleRootParameters;
+        particleRootSignatureDesc.NumParameters =
+            _countof(particleRootParameters);
+        particleRootSignatureDesc.pStaticSamplers = staticSamplers;
+        particleRootSignatureDesc.NumStaticSamplers =
+            _countof(staticSamplers);
+
+        signatureBlob = nullptr;
+        errorBlob = nullptr;
+        hr = D3D12SerializeRootSignature(
+            &particleRootSignatureDesc,
+            D3D_ROOT_SIGNATURE_VERSION_1,
+            &signatureBlob,
+            &errorBlob);
+        if (FAILED(hr)) {
+            if (errorBlob) {
+                Log(reinterpret_cast<char*>(
+                    errorBlob->GetBufferPointer()));
+            }
+            assert(false);
+        }
+        hr = device->CreateRootSignature(
+            0,
+            signatureBlob->GetBufferPointer(),
+            signatureBlob->GetBufferSize(),
+            IID_PPV_ARGS(&particleRootSignature_));
+        assert(SUCCEEDED(hr));
+
+        D3D12_INPUT_ELEMENT_DESC particleInputElements[7]{};
+        particleInputElements[0] = {
+            "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+        particleInputElements[1] = {
+            "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 16,
+            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+        for (UINT row = 0; row < 4; ++row) {
+            particleInputElements[2 + row] = {
+                "INSTANCEWORLD",
+                row,
+                DXGI_FORMAT_R32G32B32A32_FLOAT,
+                1,
+                row * sizeof(float) * 4,
+                D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA,
+                1 };
+        }
+        particleInputElements[6] = {
+            "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 64,
+            D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+
+        const D3D12_INPUT_LAYOUT_DESC particleInputLayout = {
+            particleInputElements,
+            _countof(particleInputElements) };
+        const Microsoft::WRL::ComPtr<IDxcBlob> particleVertexShader =
+            shaderCompiler->Compile(
+                L"MTEngine/Assets/Shaders/Particle.VS.hlsl",
+                L"vs_6_0");
+        const Microsoft::WRL::ComPtr<IDxcBlob> particlePixelShader =
+            shaderCompiler->Compile(
+                L"MTEngine/Assets/Shaders/Particle.PS.hlsl",
+                L"ps_6_0");
+        assert(particleVertexShader != nullptr);
+        assert(particlePixelShader != nullptr);
+
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC particlePipelineDesc{};
+        particlePipelineDesc.pRootSignature = particleRootSignature_.Get();
+        particlePipelineDesc.InputLayout = particleInputLayout;
+        particlePipelineDesc.VS = {
+            particleVertexShader->GetBufferPointer(),
+            particleVertexShader->GetBufferSize() };
+        particlePipelineDesc.PS = {
+            particlePixelShader->GetBufferPointer(),
+            particlePixelShader->GetBufferSize() };
+        particlePipelineDesc.RasterizerState = rasterizerDesc;
+        particlePipelineDesc.NumRenderTargets = 1;
+        particlePipelineDesc.RTVFormats[0] =
+            DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        particlePipelineDesc.PrimitiveTopologyType =
+            D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+        particlePipelineDesc.SampleDesc.Count = 1;
+        particlePipelineDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+        particlePipelineDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+        for (size_t blendIndex = 0;
+            blendIndex < kBlendModeCount;
+            ++blendIndex) {
+            const BlendMode blendMode =
+                static_cast<BlendMode>(blendIndex);
+            particlePipelineDesc.BlendState = CreateBlendDesc(blendMode);
+
+            for (size_t depthWriteIndex = 0;
+                depthWriteIndex < kDepthWriteModeCount;
+                ++depthWriteIndex) {
+                const DepthWriteMode depthWriteMode =
+                    static_cast<DepthWriteMode>(depthWriteIndex);
+                depthStencilDesc.DepthWriteMask =
+                    D3D12_DEPTH_WRITE_MASK_ALL;
+                if (depthWriteMode == DepthWriteMode::kDisable) {
+                    depthStencilDesc.DepthWriteMask =
+                        D3D12_DEPTH_WRITE_MASK_ZERO;
+                }
+                particlePipelineDesc.DepthStencilState = depthStencilDesc;
+                hr = device->CreateGraphicsPipelineState(
+                    &particlePipelineDesc,
+                    IID_PPV_ARGS(&particlePipelineStates_
+                        [blendIndex][depthWriteIndex]));
+                assert(SUCCEEDED(hr));
+            }
+        }
     }
 
     void PipelineManager::Bind(
         ID3D12GraphicsCommandList* commandList,
-        BlendMode blendMode) {
+        BlendMode blendMode,
+        DepthWriteMode depthWriteMode) {
         assert(commandList != nullptr);
-        const size_t index = static_cast<size_t>(blendMode);
-        assert(index < kBlendModeCount);
+        const size_t blendIndex = static_cast<size_t>(blendMode);
+        const size_t depthWriteIndex =
+            static_cast<size_t>(depthWriteMode);
+        assert(blendIndex < kBlendModeCount);
+        assert(depthWriteIndex < kDepthWriteModeCount);
 
         commandList->SetGraphicsRootSignature(rootSignature_.Get());
-        commandList->SetPipelineState(graphicsPipelineStates_[index].Get());
+        commandList->SetPipelineState(
+            graphicsPipelineStates_
+                [blendIndex][depthWriteIndex].Get());
+    }
+
+    void PipelineManager::BindParticle(
+        ID3D12GraphicsCommandList* commandList,
+        BlendMode blendMode,
+        DepthWriteMode depthWriteMode) {
+        assert(commandList != nullptr);
+        const size_t blendIndex = static_cast<size_t>(blendMode);
+        const size_t depthWriteIndex =
+            static_cast<size_t>(depthWriteMode);
+        assert(blendIndex < kBlendModeCount);
+        assert(depthWriteIndex < kDepthWriteModeCount);
+
+        commandList->SetGraphicsRootSignature(
+            particleRootSignature_.Get());
+        commandList->SetPipelineState(
+            particlePipelineStates_
+                [blendIndex][depthWriteIndex].Get());
     }
 
     ID3D12PipelineState* PipelineManager::GetPipelineState(
-        BlendMode blendMode) const {
-        const size_t index = static_cast<size_t>(blendMode);
-        assert(index < kBlendModeCount);
-        return graphicsPipelineStates_[index].Get();
+        BlendMode blendMode,
+        DepthWriteMode depthWriteMode) const {
+        const size_t blendIndex = static_cast<size_t>(blendMode);
+        const size_t depthWriteIndex =
+            static_cast<size_t>(depthWriteMode);
+        assert(blendIndex < kBlendModeCount);
+        assert(depthWriteIndex < kDepthWriteModeCount);
+        return graphicsPipelineStates_
+            [blendIndex][depthWriteIndex].Get();
     }
 
     ID3D12PipelineState* PipelineManager::GetInstancedPipelineState(

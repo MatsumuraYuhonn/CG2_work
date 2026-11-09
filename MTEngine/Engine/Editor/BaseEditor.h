@@ -25,9 +25,22 @@ namespace MTEngine {
             const std::string& name,
             std::function<void()> drawInspector);
 
-        bool IsSceneViewFocused() const { return isSceneViewFocused_; }
+        bool IsSceneViewFocused() const {
+            return isSceneViewFocused_ && !isGizmoUsing_;
+        }
 
     private:
+        enum class GizmoOperation {
+            Translate,
+            Rotate,
+            Scale
+        };
+
+        enum class GizmoSpace {
+            Local,
+            World
+        };
+
         struct GameObjectEntry {
             std::string name;
             std::function<void()> drawInspector;
@@ -51,8 +64,12 @@ namespace MTEngine {
         size_t selectedGameObjectIndex_ = 0;
 
         bool isSceneViewFocused_ = false;
+        bool isGizmoUsing_ = false;
         bool isDebugCameraSelected_ = true;
         bool isLayoutInitialized_ = false;
+
+        GizmoOperation gizmoOperation_ = GizmoOperation::Translate;
+        GizmoSpace gizmoSpace_ = GizmoSpace::World;
 
         char newObjectName_[128] = "New Object";
         char newModelPath_[512] = "";

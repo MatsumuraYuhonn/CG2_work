@@ -153,6 +153,9 @@
     <ClInclude Include="MTEngine\Engine\externals\json.hpp">
       <Filter>Engine\Externals</Filter>
     </ClInclude>
+    <ClInclude Include="MTEngine\Engine\externals\ImGuizmo\ImGuizmo.h">
+      <Filter>Engine\Externals</Filter>
+    </ClInclude>
     <ClInclude Include="MTEngine\Engine\Scene\SceneSerializer.h">
       <Filter>Engine\Scene</Filter>
     </ClInclude>
@@ -224,6 +227,9 @@
     <ClCompile Include="MTEngine\Engine\Math\Vector.cpp">
       <Filter>Engine\Math</Filter>
     </ClCompile>
+    <ClCompile Include="MTEngine\Engine\externals\ImGuizmo\ImGuizmo.cpp">
+      <Filter>Engine\Externals</Filter>
+    </ClCompile>
     <ClCompile Include="MTEngine\Game\main.cpp">
       <Filter>Game</Filter>
     </ClCompile>
@@ -279,6 +285,9 @@
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt">
       <Filter>ImGui</Filter>
+    </Text>
+    <Text Include="MTEngine\Engine\externals\ImGuizmo\LICENSE.txt">
+      <Filter>Engine\Externals</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>

@@ -79,7 +79,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>_DEBUG;USE_IMGUI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.;MTEngine\Engine;MTEngine\Game;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;externals\imgui;MTEngine\Engine;MTEngine\Game;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -100,7 +100,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.;MTEngine\Engine;MTEngine\Game;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;externals\imgui;MTEngine\Engine;MTEngine\Game;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -130,7 +130,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.;MTEngine\Engine;MTEngine\Game;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;externals\imgui;MTEngine\Engine;MTEngine\Game;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -178,6 +178,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClInclude Include="MTEngine\Engine\Debug\ImGuiManager.h" />
     <ClInclude Include="MTEngine\Engine\Debug\Logger.h" />
     <ClInclude Include="MTEngine\Engine\externals\json.hpp" />
+    <ClInclude Include="MTEngine\Engine\externals\ImGuizmo\ImGuizmo.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\ConstantBuffer.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\DescriptorHeapManager.h" />
     <ClInclude Include="MTEngine\Engine\Graphics\GraphicsManager.h" />
@@ -229,6 +230,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClCompile Include="MTEngine\Engine\Input\GamePad.cpp" />
     <ClCompile Include="MTEngine\Engine\Input\Input.cpp" />
     <ClCompile Include="MTEngine\Engine\Math\Vector.cpp" />
+    <ClCompile Include="MTEngine\Engine\externals\ImGuizmo\ImGuizmo.cpp" />
     <ClCompile Include="MTEngine\Engine\Scene\Scene.cpp" />
     <ClCompile Include="MTEngine\Engine\Scene\SceneRenderer.cpp" />
     <ClCompile Include="MTEngine\Engine\Scene\SceneSerializer.cpp" />
@@ -241,6 +243,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt" />
+    <Text Include="MTEngine\Engine\externals\ImGuizmo\LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="MTEngine\Assets\Shaders\Object3d.hlsli" />

@@ -13,6 +13,7 @@
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_internal.h"
+#include "MTEngine/Engine/externals/ImGuizmo/ImGuizmo.h"
 #endif
 
 namespace MTEngine {
@@ -114,6 +115,9 @@ namespace MTEngine {
 
     void BaseEditor::Update() {
 #ifdef USE_IMGUI
+        ImGuizmo::BeginFrame();
+        isGizmoUsing_ = false;
+
         if (!isLayoutInitialized_) {
             const ImGuiViewport* viewport = ImGui::GetMainViewport();
             const ImGuiID dockspaceId = ImGui::GetID("MainDockSpace");
@@ -354,14 +358,165 @@ namespace MTEngine {
             panelFlags |
                 ImGuiWindowFlags_NoScrollbar |
                 ImGuiWindowFlags_NoScrollWithMouse);
+
+        const bool isSceneWindowFocused =
+            ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+
+        if (isSceneWindowFocused &&
+            !ImGui::GetIO().WantTextInput &&
+            !ImGuizmo::IsUsing()) {
+            if (ImGui::IsKeyPressed(ImGuiKey_W, false)) {
+                gizmoOperation_ = GizmoOperation::Translate;
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_E, false)) {
+                gizmoOperation_ = GizmoOperation::Rotate;
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_R, false)) {
+                gizmoOperation_ = GizmoOperation::Scale;
+            }
+        }
+
+        int operationIndex = static_cast<int>(gizmoOperation_);
+        ImGui::RadioButton("Move (W)", &operationIndex, 0);
+        ImGui::SameLine();
+        ImGui::RadioButton("Rotate (E)", &operationIndex, 1);
+        ImGui::SameLine();
+        ImGui::RadioButton("Scale (R)", &operationIndex, 2);
+        gizmoOperation_ = static_cast<GizmoOperation>(operationIndex);
+
+        ImGui::SameLine();
+        ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        ImGui::SameLine();
+
+        const bool isRotationOperation =
+            gizmoOperation_ == GizmoOperation::Rotate;
+
+        int spaceIndex = static_cast<int>(gizmoSpace_);
+        if (isRotationOperation) {
+            spaceIndex = static_cast<int>(GizmoSpace::Local);
+            ImGui::BeginDisabled();
+        }
+
+        ImGui::RadioButton("Local", &spaceIndex, 0);
+        ImGui::SameLine();
+        ImGui::RadioButton("World", &spaceIndex, 1);
+
+        if (isRotationOperation) {
+            ImGui::EndDisabled();
+        } else {
+            gizmoSpace_ = static_cast<GizmoSpace>(spaceIndex);
+        }
+
+        ImGui::Separator();
+
+        const ImVec2 scenePosition = ImGui::GetCursorScreenPos();
         const ImVec2 sceneSize = ImGui::GetContentRegionAvail();
         if (sceneSize.x > 0.0f && sceneSize.y > 0.0f) {
             ImGui::Image(
                 ImTextureRef(static_cast<ImTextureID>(sceneTextureHandle_.ptr)),
                 sceneSize);
+
+            SceneObject* selectedObject = nullptr;
+            if (scene_ && selectedObjectId_ != 0) {
+                selectedObject = scene_->FindObject(selectedObjectId_);
+            }
+
+            if (selectedObject && debugCamera_) {
+                ImGuizmo::SetOrthographic(false);
+                ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
+                ImGuizmo::SetRect(
+                    scenePosition.x,
+                    scenePosition.y,
+                    sceneSize.x,
+                    sceneSize.y);
+
+                Transform& transform = selectedObject->transform;
+                Matrix4x4 world = MakeAffineMatrix(
+                    transform.scale,
+                    transform.rotate,
+                    transform.translate);
+
+                ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
+                if (gizmoOperation_ == GizmoOperation::Rotate) {
+                    operation =
+                        ImGuizmo::ROTATE_X |
+                        ImGuizmo::ROTATE_Y |
+                        ImGuizmo::ROTATE_Z;
+                }
+                if (gizmoOperation_ == GizmoOperation::Scale) {
+                    operation = ImGuizmo::SCALE;
+                }
+
+                ImGuizmo::MODE mode = ImGuizmo::LOCAL;
+                if (gizmoOperation_ != GizmoOperation::Rotate &&
+                    gizmoSpace_ == GizmoSpace::World) {
+                    mode = ImGuizmo::WORLD;
+                }
+
+                const uint64_t highId = selectedObjectId_ >> 32;
+                const uint64_t lowId = selectedObjectId_ & 0xffffffffULL;
+                const int gizmoId = static_cast<int>(highId ^ lowId);
+
+                Matrix4x4 deltaMatrix = MakeIdentityMatrix();
+
+                ImGuizmo::PushID(gizmoId);
+                const bool wasManipulated = ImGuizmo::Manipulate(
+                    &debugCamera_->GetViewMatrix().m[0][0],
+                    &debugCamera_->GetProjectionMatrix().m[0][0],
+                    operation,
+                    mode,
+                    &world.m[0][0],
+                    &deltaMatrix.m[0][0]);
+                ImGuizmo::PopID();
+
+                isGizmoUsing_ = ImGuizmo::IsUsing();
+
+                if (wasManipulated) {
+                    if (gizmoOperation_ == GizmoOperation::Translate) {
+                        transform.translate = {
+                            world.m[3][0],
+                            world.m[3][1],
+                            world.m[3][2]
+                        };
+                    }
+
+                    if (gizmoOperation_ == GizmoOperation::Rotate) {
+                        const int rotationAxis =
+                            ImGuizmo::GetActiveRotationAxis();
+                        const float rotationDelta =
+                            ImGuizmo::GetRotationDelta();
+
+                        if (rotationAxis == 0) {
+                            transform.rotate.x += rotationDelta;
+                        }
+                        if (rotationAxis == 1) {
+                            transform.rotate.y += rotationDelta;
+                        }
+                        if (rotationAxis == 2) {
+                            transform.rotate.z += rotationDelta;
+                        }
+                    }
+
+                    if (gizmoOperation_ == GizmoOperation::Scale) {
+                        float translation[3]{};
+                        float rotationDegrees[3]{};
+                        float scale[3]{};
+                        ImGuizmo::DecomposeMatrixToComponents(
+                            &world.m[0][0],
+                            translation,
+                            rotationDegrees,
+                            scale);
+
+                        transform.scale = {
+                            scale[0],
+                            scale[1],
+                            scale[2]
+                        };
+                    }
+                }
+            }
         }
-        isSceneViewFocused_ =
-            ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+        isSceneViewFocused_ = isSceneWindowFocused;
         ImGui::End();
         ImGui::PopStyleVar();
 
