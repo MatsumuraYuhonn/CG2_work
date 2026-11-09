@@ -1,0 +1,1 @@
+[![.github/workflows/DebugBuild.yml](https://github.com/MatsumuraYuhonn/CG2_work/actions/workflows/DebugBuild.yml/badge.svg)](https://github.com/MatsumuraYuhonn/CG2_work/actions/workflows/DebugBuild.yml)
