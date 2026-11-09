@@ -222,6 +222,25 @@ namespace MTEngine {
                             [blendIndex][depthWriteIndex]));
                 assert(SUCCEEDED(hr));
             }
+
+            depthStencilDesc.DepthWriteMask =
+                D3D12_DEPTH_WRITE_MASK_ALL;
+            graphicsPipelineStateDesc.DepthStencilState =
+                depthStencilDesc;
+            graphicsPipelineStateDesc.VS = {
+                instancedVertexShaderBlob->GetBufferPointer(),
+                instancedVertexShaderBlob->GetBufferSize()
+            };
+            hr = device->CreateGraphicsPipelineState(
+                &graphicsPipelineStateDesc,
+                IID_PPV_ARGS(
+                    &instancedGraphicsPipelineStates_[blendIndex]));
+            assert(SUCCEEDED(hr));
+
+            graphicsPipelineStateDesc.VS = {
+                vertexShaderBlob->GetBufferPointer(),
+                vertexShaderBlob->GetBufferSize()
+            };
         }
 
         // パーティクルはインスタンスデータを頂点入力のスロット1から受け取る。
@@ -375,6 +394,18 @@ namespace MTEngine {
         commandList->SetPipelineState(
             graphicsPipelineStates_
                 [blendIndex][depthWriteIndex].Get());
+    }
+
+    void PipelineManager::BindInstanced(
+        ID3D12GraphicsCommandList* commandList,
+        BlendMode blendMode) {
+        assert(commandList != nullptr);
+        const size_t blendIndex = static_cast<size_t>(blendMode);
+        assert(blendIndex < kBlendModeCount);
+
+        commandList->SetGraphicsRootSignature(rootSignature_.Get());
+        commandList->SetPipelineState(
+            instancedGraphicsPipelineStates_[blendIndex].Get());
     }
 
     void PipelineManager::BindParticle(

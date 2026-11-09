@@ -41,6 +41,11 @@ namespace MTEngine {
             BlendMode blendMode,
             DepthWriteMode depthWriteMode);
 
+        // 通常モデルのインスタンシング描画用PSOをバインドする。
+        void BindInstanced(
+            ID3D12GraphicsCommandList* commandList,
+            BlendMode blendMode);
+
         // パーティクル用のインスタンシング描画パイプラインをバインドする。
         void BindParticle(
             ID3D12GraphicsCommandList* commandList,
@@ -72,6 +77,9 @@ namespace MTEngine {
                 Microsoft::WRL::ComPtr<ID3D12PipelineState>,
                 kDepthWriteModeCount>,
             kBlendModeCount> graphicsPipelineStates_{};
+        std::array<
+            Microsoft::WRL::ComPtr<ID3D12PipelineState>,
+            kBlendModeCount> instancedGraphicsPipelineStates_{};
         std::array<
             std::array<
                 Microsoft::WRL::ComPtr<ID3D12PipelineState>,

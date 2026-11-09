@@ -206,7 +206,8 @@ namespace MTEngine {
         // SceneRenderer以降の通常描画が既存の頂点シェーダーを使えるように戻す。
         pipelineManager_->Bind(
             commandList.Get(),
-            BlendMode::kBlendModeNormal);
+            BlendMode::kBlendModeNormal,
+            DepthWriteMode::kEnable);
     }
 
     bool SceneRenderer::LoadModel(
