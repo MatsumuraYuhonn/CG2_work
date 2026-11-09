@@ -5,3 +5,5 @@
 
 
 [![DevelopmentBuild](https://github.com/MatsumuraYuhonn/CG2_work/actions/workflows/DevelopmentBuild.yml/badge.svg)](https://github.com/MatsumuraYuhonn/CG2_work/actions/workflows/DevelopmentBuild.yml)
+
+[![.github/workflows/CheckUnwantedFiles.yml](https://github.com/MatsumuraYuhonn/CG2_work/actions/workflows/CheckUnwantedFiles.yml/badge.svg)](https://github.com/MatsumuraYuhonn/CG2_work/actions/workflows/CheckUnwantedFiles.yml)
