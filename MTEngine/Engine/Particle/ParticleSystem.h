@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <random>
 #include <string>
 #include <vector>
@@ -29,6 +30,8 @@ namespace MTEngine {
 
     class ParticleSystem {
     public:
+        using EmitterId = uint64_t;
+
         bool Initialize(
             ID3D12Device* device,
             DescriptorHeapManager* srvHeapManager,
@@ -55,47 +58,167 @@ namespace MTEngine {
                 lastError_ = "Failed to create particle instance buffers";
                 return false;
             }
-            if (!LoadTexture(settings_.render.texturePath)) {
+            D3D12_GPU_DESCRIPTOR_HANDLE textureHandle{};
+            if (!LoadTexture(
+                settings_.render.texturePath,
+                textureHandle)) {
                 return false;
             }
 
             particles_.reserve(settings_.emitter.maxParticles);
+            Emitter emitter;
+            emitter.id = nextEmitterId_++;
+            emitter.settings = settings_;
+            emitter.textureHandle = textureHandle;
+            emitters_.push_back(emitter);
+            bufferParticleCapacity_ = settings_.emitter.maxParticles;
             isInitialized_ = true;
             lastError_.clear();
             return true;
         }
 
         bool ApplySettings(const ParticleEffectData& source) {
+            if (emitters_.empty()) {
+                lastError_ = "Particle emitter is not available";
+                return false;
+            }
+            return ApplySettings(emitters_.front().id, source);
+        }
+
+        bool ApplySettings(
+            EmitterId emitterId,
+            const ParticleEffectData& source) {
             if (!isInitialized_) {
+                return false;
+            }
+
+            Emitter* emitter = FindEmitter(emitterId);
+            if (!emitter) {
+                lastError_ = "Particle emitter is not available";
                 return false;
             }
 
             ParticleEffectData settings = source;
             ValidateParticleEffectData(settings);
 
-            if (settings.render.texturePath != settings_.render.texturePath) {
-                if (!LoadTexture(settings.render.texturePath)) {
+            D3D12_GPU_DESCRIPTOR_HANDLE textureHandle =
+                emitter->textureHandle;
+            if (settings.render.texturePath !=
+                emitter->settings.render.texturePath) {
+                if (!LoadTexture(
+                    settings.render.texturePath,
+                    textureHandle)) {
                     return false;
                 }
             }
 
-            if (settings.emitter.maxParticles !=
-                settings_.emitter.maxParticles) {
-                if (!CreateInstanceBuffers(
-                    settings.emitter.maxParticles)) {
+            const uint32_t requiredCapacity = CalculateRequiredCapacity(
+                emitterId,
+                settings.emitter.maxParticles);
+            if (requiredCapacity == 0) {
+                lastError_ = "Particle capacity is too large";
+                return false;
+            }
+
+            if (requiredCapacity > bufferParticleCapacity_) {
+                if (!CreateInstanceBuffers(requiredCapacity)) {
                     lastError_ = "Failed to resize particle instance buffers";
                     return false;
                 }
-
-                if (particles_.size() > settings.emitter.maxParticles) {
-                    particles_.resize(settings.emitter.maxParticles);
-                }
-                particles_.reserve(settings.emitter.maxParticles);
+                bufferParticleCapacity_ = requiredCapacity;
+                particles_.reserve(requiredCapacity);
             }
 
-            settings_ = settings;
+            emitter->settings = settings;
+            emitter->textureHandle = textureHandle;
+            TrimEmitterParticles(
+                emitterId,
+                settings.emitter.maxParticles);
             lastError_.clear();
             return true;
+        }
+
+        EmitterId CreateEmitter(
+            const ParticleEffectData& source) {
+            if (!isInitialized_) {
+                lastError_ = "ParticleSystem is not initialized";
+                return 0;
+            }
+
+            ParticleEffectData validatedData = source;
+            ValidateParticleEffectData(validatedData);
+
+            D3D12_GPU_DESCRIPTOR_HANDLE textureHandle{};
+            if (!LoadTexture(
+                validatedData.render.texturePath,
+                textureHandle)) {
+                return 0;
+            }
+
+            const uint32_t requiredCapacity = CalculateRequiredCapacity(
+                0,
+                validatedData.emitter.maxParticles);
+            if (requiredCapacity == 0) {
+                lastError_ = "Particle capacity is too large";
+                return 0;
+            }
+
+            if (requiredCapacity > bufferParticleCapacity_) {
+                if (!CreateInstanceBuffers(requiredCapacity)) {
+                    lastError_ = "Failed to resize particle instance buffers";
+                    return 0;
+                }
+                bufferParticleCapacity_ = requiredCapacity;
+                particles_.reserve(requiredCapacity);
+            }
+
+            Emitter emitter;
+            emitter.id = nextEmitterId_++;
+            emitter.settings = validatedData;
+            emitter.textureHandle = textureHandle;
+            emitters_.push_back(emitter);
+            lastError_.clear();
+            return emitter.id;
+        }
+
+        bool RemoveEmitter(EmitterId emitterId) {
+            const auto emitterIterator = std::find_if(
+                emitters_.begin(),
+                emitters_.end(),
+                [emitterId](const Emitter& emitter) {
+                    return emitter.id == emitterId;
+                });
+            if (emitterIterator == emitters_.end()) {
+                return false;
+            }
+
+            const auto particleIterator = std::remove_if(
+                particles_.begin(),
+                particles_.end(),
+                [emitterId](const Particle& particle) {
+                    return particle.emitterId == emitterId;
+                });
+            particles_.erase(particleIterator, particles_.end());
+            emitters_.erase(emitterIterator);
+            return true;
+        }
+
+        std::vector<EmitterId> GetEmitterIds() const {
+            std::vector<EmitterId> emitterIds;
+            emitterIds.reserve(emitters_.size());
+            for (const Emitter& emitter : emitters_) {
+                emitterIds.push_back(emitter.id);
+            }
+            return emitterIds;
+        }
+
+        const ParticleEffectData* GetEmitterData(
+            EmitterId emitterId) const {
+            const Emitter* emitter = FindEmitter(emitterId);
+            if (!emitter) {
+                return nullptr;
+            }
+            return &emitter->settings;
         }
 
         void Update(float deltaTime) {
@@ -104,39 +227,54 @@ namespace MTEngine {
             }
 
             deltaTime = (std::clamp)(deltaTime, 0.0f, 0.1f);
-            emissionElapsed_ += deltaTime;
+            for (Emitter& emitter : emitters_) {
+                if (!emitter.isPlaying) {
+                    continue;
+                }
 
-            bool canEmit = settings_.emitter.loop;
-            if (!settings_.emitter.loop) {
-                canEmit =
-                    emissionElapsed_ <= settings_.emitter.emissionDuration;
-            }
+                emitter.emissionElapsed += deltaTime;
+                bool canEmit = emitter.settings.emitter.loop;
+                if (!emitter.settings.emitter.loop) {
+                    canEmit = emitter.emissionElapsed <=
+                        emitter.settings.emitter.emissionDuration;
+                }
 
-            if (canEmit && settings_.emitter.spawnRate > 0.0f) {
-                spawnAccumulator_ +=
-                    settings_.emitter.spawnRate * deltaTime;
+                if (!canEmit ||
+                    emitter.settings.emitter.spawnRate <= 0.0f) {
+                    continue;
+                }
 
-                const uint32_t spawnCount =
-                    static_cast<uint32_t>(spawnAccumulator_);
-                spawnAccumulator_ -= static_cast<float>(spawnCount);
+                emitter.spawnAccumulator +=
+                    emitter.settings.emitter.spawnRate * deltaTime;
+                const uint32_t spawnCount = static_cast<uint32_t>(
+                    emitter.spawnAccumulator);
+                emitter.spawnAccumulator -=
+                    static_cast<float>(spawnCount);
 
+                size_t activeParticleCount =
+                    GetActiveParticleCount(emitter.id);
                 for (uint32_t index = 0; index < spawnCount; ++index) {
-                    if (particles_.size() >=
-                        settings_.emitter.maxParticles) {
+                    if (activeParticleCount >=
+                        emitter.settings.emitter.maxParticles) {
                         break;
                     }
-                    SpawnParticle();
+                    SpawnParticle(emitter);
+                    ++activeParticleCount;
                 }
             }
 
             for (Particle& particle : particles_) {
+                const Emitter* emitter = FindEmitter(particle.emitterId);
+                if (!emitter || !emitter->isPlaying) {
+                    continue;
+                }
                 particle.age += deltaTime;
                 particle.velocity.x +=
-                    settings_.particle.acceleration.x * deltaTime;
+                    emitter->settings.particle.acceleration.x * deltaTime;
                 particle.velocity.y +=
-                    settings_.particle.acceleration.y * deltaTime;
+                    emitter->settings.particle.acceleration.y * deltaTime;
                 particle.velocity.z +=
-                    settings_.particle.acceleration.z * deltaTime;
+                    emitter->settings.particle.acceleration.z * deltaTime;
                 particle.position.x += particle.velocity.x * deltaTime;
                 particle.position.y += particle.velocity.y * deltaTime;
                 particle.position.z += particle.velocity.z * deltaTime;
@@ -155,14 +293,6 @@ namespace MTEngine {
             if (!isInitialized_ || !renderer || particles_.empty()) {
                 return;
             }
-
-            BlendMode blendMode = BlendMode::kBlendModeAdd;
-            if (settings_.render.blendMode == ParticleBlendMode::Alpha) {
-                blendMode = BlendMode::kBlendModeNormal;
-            }
-            renderer->SetParticlePipelineState(
-                blendMode,
-                DepthWriteMode::kDisable);
 
             ID3D12GraphicsCommandList* commandList =
                 renderer->GetCommandList();
@@ -185,48 +315,75 @@ namespace MTEngine {
 
             ParticleInstanceData* instanceData =
                 static_cast<ParticleInstanceData*>(instanceMappedData_);
-            for (size_t index = 0; index < particles_.size(); ++index) {
-                const Particle& particle = particles_[index];
-                float normalizedAge = particle.age / particle.lifeTime;
-                normalizedAge = (std::clamp)(normalizedAge, 0.0f, 1.0f);
-
-                const float size = Lerp(
-                    settings_.particle.startSize,
-                    settings_.particle.endSize,
-                    normalizedAge);
-                const Vector4 color = Lerp(
-                    settings_.particle.startColor,
-                    settings_.particle.endColor,
-                    normalizedAge);
-
-                Matrix4x4 world = MakeScaleMatrix({ size, size, size });
-                if (settings_.render.billboard) {
-                    world = Multiply(world, billboardMatrix);
-                }
-                world = Multiply(
-                    world,
-                    MakeTranslateMatrix(particle.position));
-
-                instanceData[index].world = world;
-                instanceData[index].color = color;
-            }
-
             ParticleCameraData* cameraData =
                 static_cast<ParticleCameraData*>(cameraMappedData_);
             cameraData->viewProjection = viewProjection;
 
-            commandList->SetGraphicsRootConstantBufferView(
-                0,
-                cameraResource_->GetGPUVirtualAddress());
-            commandList->SetGraphicsRootDescriptorTable(
-                1,
-                textureHandle_);
-            commandList->DrawIndexedInstanced(
-                6,
-                static_cast<UINT>(particles_.size()),
-                0,
-                0,
-                0);
+            UINT instanceIndex = 0;
+            for (const Emitter& emitter : emitters_) {
+                const UINT firstInstance = instanceIndex;
+                for (const Particle& particle : particles_) {
+                    if (particle.emitterId != emitter.id) {
+                        continue;
+                    }
+
+                    float normalizedAge =
+                        particle.age / particle.lifeTime;
+                    normalizedAge = (std::clamp)(
+                        normalizedAge,
+                        0.0f,
+                        1.0f);
+
+                    const float size = Lerp(
+                        emitter.settings.particle.startSize,
+                        emitter.settings.particle.endSize,
+                        normalizedAge);
+                    const Vector4 color = Lerp(
+                        emitter.settings.particle.startColor,
+                        emitter.settings.particle.endColor,
+                        normalizedAge);
+
+                    Matrix4x4 world = MakeScaleMatrix(
+                        { size, size, size });
+                    if (emitter.settings.render.billboard) {
+                        world = Multiply(world, billboardMatrix);
+                    }
+                    world = Multiply(
+                        world,
+                        MakeTranslateMatrix(particle.position));
+
+                    instanceData[instanceIndex].world = world;
+                    instanceData[instanceIndex].color = color;
+                    ++instanceIndex;
+                }
+
+                const UINT instanceCount =
+                    instanceIndex - firstInstance;
+                if (instanceCount == 0) {
+                    continue;
+                }
+
+                BlendMode blendMode = BlendMode::kBlendModeAdd;
+                if (emitter.settings.render.blendMode ==
+                    ParticleBlendMode::Alpha) {
+                    blendMode = BlendMode::kBlendModeNormal;
+                }
+                renderer->SetParticlePipelineState(
+                    blendMode,
+                    DepthWriteMode::kDisable);
+                commandList->SetGraphicsRootConstantBufferView(
+                    0,
+                    cameraResource_->GetGPUVirtualAddress());
+                commandList->SetGraphicsRootDescriptorTable(
+                    1,
+                    emitter.textureHandle);
+                commandList->DrawIndexedInstanced(
+                    6,
+                    instanceCount,
+                    0,
+                    0,
+                    firstInstance);
+            }
 
             renderer->SetPipelineState(
                 BlendMode::kBlendModeNormal,
@@ -235,9 +392,31 @@ namespace MTEngine {
 
         void Restart() {
             particles_.clear();
-            spawnAccumulator_ = 0.0f;
-            emissionElapsed_ = 0.0f;
+            for (Emitter& emitter : emitters_) {
+                emitter.spawnAccumulator = 0.0f;
+                emitter.emissionElapsed = 0.0f;
+                emitter.isPlaying = true;
+            }
             isPlaying_ = true;
+        }
+
+        bool Restart(EmitterId emitterId) {
+            Emitter* emitter = FindEmitter(emitterId);
+            if (!emitter) {
+                return false;
+            }
+
+            const auto particleIterator = std::remove_if(
+                particles_.begin(),
+                particles_.end(),
+                [emitterId](const Particle& particle) {
+                    return particle.emitterId == emitterId;
+                });
+            particles_.erase(particleIterator, particles_.end());
+            emitter->spawnAccumulator = 0.0f;
+            emitter->emissionElapsed = 0.0f;
+            emitter->isPlaying = true;
+            return true;
         }
 
         void SetPlaying(bool isPlaying) {
@@ -248,8 +427,34 @@ namespace MTEngine {
             return isPlaying_;
         }
 
+        bool SetPlaying(EmitterId emitterId, bool isPlaying) {
+            Emitter* emitter = FindEmitter(emitterId);
+            if (!emitter) {
+                return false;
+            }
+            emitter->isPlaying = isPlaying;
+            return true;
+        }
+
+        bool IsPlaying(EmitterId emitterId) const {
+            const Emitter* emitter = FindEmitter(emitterId);
+            if (!emitter) {
+                return false;
+            }
+            return emitter->isPlaying;
+        }
+
         size_t GetActiveParticleCount() const {
             return particles_.size();
+        }
+
+        size_t GetActiveParticleCount(EmitterId emitterId) const {
+            return static_cast<size_t>(std::count_if(
+                particles_.begin(),
+                particles_.end(),
+                [emitterId](const Particle& particle) {
+                    return particle.emitterId == emitterId;
+                }));
         }
 
         const ParticleEffectData& GetSettings() const {
@@ -262,10 +467,20 @@ namespace MTEngine {
 
     private:
         struct Particle {
+            EmitterId emitterId = 0;
             Vector3 position{};
             Vector3 velocity{};
             float age = 0.0f;
             float lifeTime = 1.0f;
+        };
+
+        struct Emitter {
+            EmitterId id = 0;
+            ParticleEffectData settings;
+            D3D12_GPU_DESCRIPTOR_HANDLE textureHandle{};
+            float spawnAccumulator = 0.0f;
+            float emissionElapsed = 0.0f;
+            bool isPlaying = true;
         };
 
         struct ParticleInstanceData {
@@ -279,6 +494,74 @@ namespace MTEngine {
 
         static size_t AlignConstantBufferSize(size_t size) {
             return (size + 255) & ~static_cast<size_t>(255);
+        }
+
+        Emitter* FindEmitter(EmitterId emitterId) {
+            const auto iterator = std::find_if(
+                emitters_.begin(),
+                emitters_.end(),
+                [emitterId](const Emitter& emitter) {
+                    return emitter.id == emitterId;
+                });
+            if (iterator == emitters_.end()) {
+                return nullptr;
+            }
+            return &(*iterator);
+        }
+
+        const Emitter* FindEmitter(EmitterId emitterId) const {
+            const auto iterator = std::find_if(
+                emitters_.begin(),
+                emitters_.end(),
+                [emitterId](const Emitter& emitter) {
+                    return emitter.id == emitterId;
+                });
+            if (iterator == emitters_.end()) {
+                return nullptr;
+            }
+            return &(*iterator);
+        }
+
+        uint32_t CalculateRequiredCapacity(
+            EmitterId replacedEmitterId,
+            uint32_t replacementCapacity) const {
+            uint64_t capacity = replacementCapacity;
+            for (const Emitter& emitter : emitters_) {
+                if (emitter.id == replacedEmitterId) {
+                    continue;
+                }
+                capacity += emitter.settings.emitter.maxParticles;
+            }
+
+            const uint64_t maximumCapacity =
+                static_cast<uint64_t>((std::numeric_limits<UINT>::max)()) /
+                sizeof(ParticleInstanceData);
+            if (capacity == 0 || capacity > maximumCapacity) {
+                return 0;
+            }
+            return static_cast<uint32_t>(capacity);
+        }
+
+        void TrimEmitterParticles(
+            EmitterId emitterId,
+            uint32_t maximumParticles) {
+            uint32_t keptParticleCount = 0;
+            const auto iterator = std::remove_if(
+                particles_.begin(),
+                particles_.end(),
+                [emitterId,
+                 maximumParticles,
+                 &keptParticleCount](const Particle& particle) {
+                    if (particle.emitterId != emitterId) {
+                        return false;
+                    }
+                    if (keptParticleCount < maximumParticles) {
+                        ++keptParticleCount;
+                        return false;
+                    }
+                    return true;
+                });
+            particles_.erase(iterator, particles_.end());
         }
 
         bool CreateGeometry() {
@@ -360,7 +643,9 @@ namespace MTEngine {
             return true;
         }
 
-        bool LoadTexture(const std::string& texturePath) {
+        bool LoadTexture(
+            const std::string& texturePath,
+            D3D12_GPU_DESCRIPTOR_HANDLE& textureHandle) {
             if (texturePath.empty()) {
                 lastError_ = "Particle texture path is empty";
                 return false;
@@ -370,40 +655,41 @@ namespace MTEngine {
                 return false;
             }
             if (!textureManager_.TryGetGPUDescriptorHandle(
-                texturePath, textureHandle_)) {
+                texturePath, textureHandle)) {
                 lastError_ = "Particle texture descriptor is unavailable";
                 return false;
             }
             return true;
         }
 
-        void SpawnParticle() {
+        void SpawnParticle(const Emitter& emitter) {
             Particle particle;
-            particle.position = settings_.emitter.position;
+            particle.emitterId = emitter.id;
+            particle.position = emitter.settings.emitter.position;
             particle.position.x += RandomRange(
-                -settings_.emitter.spawnArea.x * 0.5f,
-                settings_.emitter.spawnArea.x * 0.5f);
+                -emitter.settings.emitter.spawnArea.x * 0.5f,
+                emitter.settings.emitter.spawnArea.x * 0.5f);
             particle.position.y += RandomRange(
-                -settings_.emitter.spawnArea.y * 0.5f,
-                settings_.emitter.spawnArea.y * 0.5f);
+                -emitter.settings.emitter.spawnArea.y * 0.5f,
+                emitter.settings.emitter.spawnArea.y * 0.5f);
             particle.position.z += RandomRange(
-                -settings_.emitter.spawnArea.z * 0.5f,
-                settings_.emitter.spawnArea.z * 0.5f);
+                -emitter.settings.emitter.spawnArea.z * 0.5f,
+                emitter.settings.emitter.spawnArea.z * 0.5f);
 
             particle.velocity = {
                 RandomRange(
-                    settings_.particle.velocity.min.x,
-                    settings_.particle.velocity.max.x),
+                    emitter.settings.particle.velocity.min.x,
+                    emitter.settings.particle.velocity.max.x),
                 RandomRange(
-                    settings_.particle.velocity.min.y,
-                    settings_.particle.velocity.max.y),
+                    emitter.settings.particle.velocity.min.y,
+                    emitter.settings.particle.velocity.max.y),
                 RandomRange(
-                    settings_.particle.velocity.min.z,
-                    settings_.particle.velocity.max.z)
+                    emitter.settings.particle.velocity.min.z,
+                    emitter.settings.particle.velocity.max.z)
             };
             particle.lifeTime = RandomRange(
-                settings_.particle.lifeTime.min,
-                settings_.particle.lifeTime.max);
+                emitter.settings.particle.lifeTime.min,
+                emitter.settings.particle.lifeTime.max);
             particles_.push_back(particle);
         }
 
@@ -436,6 +722,7 @@ namespace MTEngine {
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList_;
         TextureManager textureManager_;
         ParticleEffectData settings_;
+        std::vector<Emitter> emitters_;
         std::vector<Particle> particles_;
         std::mt19937 randomEngine_{ std::random_device{}() };
 
@@ -446,12 +733,11 @@ namespace MTEngine {
         D3D12_VERTEX_BUFFER_VIEW vertexBufferView_{};
         D3D12_VERTEX_BUFFER_VIEW instanceBufferView_{};
         D3D12_INDEX_BUFFER_VIEW indexBufferView_{};
-        D3D12_GPU_DESCRIPTOR_HANDLE textureHandle_{};
         void* instanceMappedData_ = nullptr;
         void* cameraMappedData_ = nullptr;
 
-        float spawnAccumulator_ = 0.0f;
-        float emissionElapsed_ = 0.0f;
+        EmitterId nextEmitterId_ = 1;
+        uint32_t bufferParticleCapacity_ = 0;
         bool isInitialized_ = false;
         bool isPlaying_ = true;
         std::string lastError_;

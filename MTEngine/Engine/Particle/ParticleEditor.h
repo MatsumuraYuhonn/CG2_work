@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <string>
+#include <vector>
 
 #include "MTEngine/Engine/Particle/ParticleEffectSerializer.h"
 #include "MTEngine/Engine/Particle/ParticleSystem.h"
@@ -28,6 +29,13 @@ namespace MTEngine {
                 texturePathBuffer_,
                 sizeof(texturePathBuffer_),
                 editingData_.render.texturePath);
+            if (particleSystem_) {
+                const std::vector<ParticleSystem::EmitterId> emitterIds =
+                    particleSystem_->GetEmitterIds();
+                if (!emitterIds.empty()) {
+                    selectedEmitterId_ = emitterIds.front();
+                }
+            }
             statusMessage_ = "Particle editor ready";
             statusIsError_ = false;
         }
@@ -55,22 +63,97 @@ namespace MTEngine {
             }
 
             if (particleSystem_) {
+                char selectedEmitterLabel[64]{};
+                if (selectedEmitterId_ != 0) {
+                    std::snprintf(
+                        selectedEmitterLabel,
+                        sizeof(selectedEmitterLabel),
+                        "Emitter %llu",
+                        static_cast<unsigned long long>(selectedEmitterId_));
+                } else {
+                    CopyText(
+                        selectedEmitterLabel,
+                        sizeof(selectedEmitterLabel),
+                        "No emitter");
+                }
+
+                if (ImGui::BeginCombo(
+                    "Emitter Instance",
+                    selectedEmitterLabel)) {
+                    const std::vector<ParticleSystem::EmitterId> emitterIds =
+                        particleSystem_->GetEmitterIds();
+                    for (ParticleSystem::EmitterId emitterId : emitterIds) {
+                        char emitterLabel[64]{};
+                        std::snprintf(
+                            emitterLabel,
+                            sizeof(emitterLabel),
+                            "Emitter %llu",
+                            static_cast<unsigned long long>(emitterId));
+                        const bool isSelected =
+                            emitterId == selectedEmitterId_;
+                        if (ImGui::Selectable(emitterLabel, isSelected)) {
+                            SelectEmitter(emitterId);
+                        }
+                        if (isSelected) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+
+                if (ImGui::Button("Add Emitter")) {
+                    ParticleEffectData emitterData;
+                    const ParticleSystem::EmitterId emitterId =
+                        particleSystem_->CreateEmitter(emitterData);
+                    if (emitterId == 0) {
+                        SetError(particleSystem_->GetLastError());
+                    } else {
+                        SelectEmitter(emitterId);
+                        statusMessage_ = "Emitter added";
+                        statusIsError_ = false;
+                    }
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Remove Emitter") &&
+                    selectedEmitterId_ != 0) {
+                    const ParticleSystem::EmitterId removedEmitterId =
+                        selectedEmitterId_;
+                    if (particleSystem_->RemoveEmitter(removedEmitterId)) {
+                        selectedEmitterId_ = 0;
+                        const std::vector<ParticleSystem::EmitterId> emitterIds =
+                            particleSystem_->GetEmitterIds();
+                        if (!emitterIds.empty()) {
+                            SelectEmitter(emitterIds.front());
+                        }
+                        statusMessage_ = "Emitter removed";
+                        statusIsError_ = false;
+                    }
+                }
+
+                if (selectedEmitterId_ == 0) {
+                    ImGui::Text("Create an emitter to edit its settings.");
+                }
+            }
+
+            if (particleSystem_ && selectedEmitterId_ != 0) {
                 const char* playButtonLabel = "Pause";
-                if (!particleSystem_->IsPlaying()) {
+                if (!particleSystem_->IsPlaying(selectedEmitterId_)) {
                     playButtonLabel = "Play";
                 }
                 if (ImGui::Button(playButtonLabel)) {
                     particleSystem_->SetPlaying(
-                        !particleSystem_->IsPlaying());
+                        selectedEmitterId_,
+                        !particleSystem_->IsPlaying(selectedEmitterId_));
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Restart")) {
-                    particleSystem_->Restart();
+                    particleSystem_->Restart(selectedEmitterId_);
                 }
                 ImGui::SameLine();
                 ImGui::Text(
                     "Alive: %zu / %u",
-                    particleSystem_->GetActiveParticleCount(),
+                    particleSystem_->GetActiveParticleCount(
+                        selectedEmitterId_),
                     editingData_.emitter.maxParticles);
             }
 
@@ -257,7 +340,13 @@ namespace MTEngine {
                 SetError("ParticleSystem is not available");
                 return;
             }
-            if (!particleSystem_->ApplySettings(editingData_)) {
+            if (selectedEmitterId_ == 0) {
+                SetError("Particle emitter is not selected");
+                return;
+            }
+            if (!particleSystem_->ApplySettings(
+                selectedEmitterId_,
+                editingData_)) {
                 SetError(particleSystem_->GetLastError());
                 return;
             }
@@ -281,7 +370,7 @@ namespace MTEngine {
                 editingData_.render.texturePath);
             Apply();
             if (!statusIsError_) {
-                particleSystem_->Restart();
+                particleSystem_->Restart(selectedEmitterId_);
                 statusMessage_ = "Loaded: " + filePath_;
             }
         }
@@ -304,6 +393,24 @@ namespace MTEngine {
             statusIsError_ = true;
         }
 
+        void SelectEmitter(ParticleSystem::EmitterId emitterId) {
+            if (!particleSystem_) {
+                return;
+            }
+            const ParticleEffectData* emitterData =
+                particleSystem_->GetEmitterData(emitterId);
+            if (!emitterData) {
+                return;
+            }
+            selectedEmitterId_ = emitterId;
+            editingData_ = *emitterData;
+            CopyText(nameBuffer_, sizeof(nameBuffer_), editingData_.name);
+            CopyText(
+                texturePathBuffer_,
+                sizeof(texturePathBuffer_),
+                editingData_.render.texturePath);
+        }
+
         static void CopyText(
             char* destination,
             size_t destinationSize,
@@ -316,6 +423,7 @@ namespace MTEngine {
         }
 
         ParticleSystem* particleSystem_ = nullptr;
+        ParticleSystem::EmitterId selectedEmitterId_ = 0;
         ParticleEffectData editingData_;
         std::string filePath_;
         std::string statusMessage_;
