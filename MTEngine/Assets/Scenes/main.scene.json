@@ -2,17 +2,17 @@
     "objects": [
         {
             "id": 1,
-            "modelPath": "MTEngine/Assets/Resources/block/block.obj",
-            "name": "Player",
+            "modelPath": "MTEngine/Assets/Resources/ball/ball.obj",
+            "name": "New Object",
             "transform": {
                 "position": [
-                    -2.4765381813049316,
-                    0.5,
-                    4.216326713562012
+                    -0.0776597261428833,
+                    6.5755157470703125,
+                    0.0
                 ],
                 "rotation": [
                     0.0,
-                    -1.5707963705062866,
+                    0.0,
                     0.0
                 ],
                 "scale": [
@@ -25,7 +25,7 @@
         {
             "id": 2,
             "modelPath": "MTEngine/Assets/Resources/plane.obj",
-            "name": "Feild",
+            "name": "New Object",
             "transform": {
                 "position": [
                     0.0,
@@ -33,14 +33,14 @@
                     0.0
                 ],
                 "rotation": [
-                    1.5707963705062866,
-                    0.0,
+                    -1.5707963705062866,
+                    3.1415927410125732,
                     0.0
                 ],
                 "scale": [
-                    50.0,
-                    50.0,
-                    10.0
+                    10.0,
+                    10.0,
+                    1.0
                 ]
             }
         }

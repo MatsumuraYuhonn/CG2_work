@@ -1,0 +1,61 @@
+{
+    "emitter": {
+        "emissionDuration": 2.0,
+        "loop": true,
+        "maxParticles": 160,
+        "position": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "spawnArea": [
+            0.6000000238418579,
+            0.6000000238418579,
+            0.6000000238418579
+        ],
+        "spawnRate": 110.0
+    },
+    "particle": {
+        "acceleration": [
+            0.0,
+            0.5,
+            0.0
+        ],
+        "endColor": [
+            0.20000000298023224,
+            0.009999999776482582,
+            0.0,
+            0.0
+        ],
+        "endSize": 0.07999999821186066,
+        "lifeTime": {
+            "max": 0.75,
+            "min": 0.3499999940395355
+        },
+        "startColor": [
+            1.0,
+            0.25,
+            0.019999999552965164,
+            1.0
+        ],
+        "startSize": 0.550000011920929,
+        "velocity": {
+            "max": [
+                0.30000001192092896,
+                1.5,
+                0.30000001192092896
+            ],
+            "min": [
+                -0.30000001192092896,
+                0.5,
+                -0.30000001192092896
+            ]
+        }
+    },
+    "render": {
+        "billboard": true,
+        "blendMode": "Additive",
+        "texture": "MTEngine/Assets/Resources/circle.png"
+    },
+    "version": 1
+}

@@ -235,6 +235,66 @@ namespace MTEngine {
             return true;
         }
 
+        bool SetEmitterSpawnRate(
+            EmitterId emitterId,
+            float spawnRate) {
+            Emitter* emitter = FindEmitter(emitterId);
+            if (!emitter) {
+                lastError_ = "Particle emitter is not available";
+                return false;
+            }
+
+            emitter->settings.emitter.spawnRate =
+                (std::max)(0.0f, spawnRate);
+            lastError_.clear();
+            return true;
+        }
+
+        bool EmitRadialBurst(
+            EmitterId emitterId,
+            uint32_t particleCount,
+            float minimumSpeed,
+            float maximumSpeed,
+            float minimumDirectionY) {
+            Emitter* emitter = FindEmitter(emitterId);
+            if (!emitter) {
+                lastError_ = "Particle emitter is not available";
+                return false;
+            }
+
+            minimumDirectionY = (std::clamp)(
+                minimumDirectionY,
+                -1.0f,
+                0.99f);
+
+            const size_t activeParticleCount =
+                GetActiveParticleCount(emitterId);
+            const size_t maximumParticleCount =
+                emitter->settings.emitter.maxParticles;
+            if (activeParticleCount >= maximumParticleCount) {
+                return true;
+            }
+
+            const size_t availableParticleCount =
+                maximumParticleCount - activeParticleCount;
+            particleCount = (std::min)(
+                particleCount,
+                static_cast<uint32_t>(availableParticleCount));
+
+            for (uint32_t index = 0;
+                 index < particleCount;
+                 ++index) {
+                SpawnRadialParticle(
+                    *emitter,
+                    minimumSpeed,
+                    maximumSpeed,
+                    minimumDirectionY);
+            }
+
+            lastError_.clear();
+            return true;
+        }
+
         void Update(float deltaTime) {
             if (!isInitialized_ || !isPlaying_) {
                 return;
@@ -289,6 +349,7 @@ namespace MTEngine {
                     emitter->settings.particle.acceleration.y * deltaTime;
                 particle.velocity.z +=
                     emitter->settings.particle.acceleration.z * deltaTime;
+
                 particle.position.x += particle.velocity.x * deltaTime;
                 particle.position.y += particle.velocity.y * deltaTime;
                 particle.position.z += particle.velocity.z * deltaTime;
@@ -700,6 +761,46 @@ namespace MTEngine {
                 RandomRange(
                     emitter.settings.particle.velocity.min.z,
                     emitter.settings.particle.velocity.max.z)
+            };
+            particle.lifeTime = RandomRange(
+                emitter.settings.particle.lifeTime.min,
+                emitter.settings.particle.lifeTime.max);
+            particles_.push_back(particle);
+        }
+
+        void SpawnRadialParticle(
+            const Emitter& emitter,
+            float minimumSpeed,
+            float maximumSpeed,
+            float minimumDirectionY) {
+            Particle particle;
+            particle.emitterId = emitter.id;
+            particle.position = emitter.settings.emitter.position;
+
+            Vector3 direction{};
+            float directionLength = 0.0f;
+            do {
+                direction = {
+                    RandomRange(-1.0f, 1.0f),
+                    RandomRange(-1.0f, 1.0f),
+                    RandomRange(-1.0f, 1.0f)
+                };
+                directionLength = std::sqrt(
+                    direction.x * direction.x +
+                    direction.y * direction.y +
+                    direction.z * direction.z);
+            } while (
+                directionLength < 0.001f ||
+                directionLength > 1.0f ||
+                direction.y / directionLength < minimumDirectionY);
+
+            const float speed = RandomRange(
+                minimumSpeed,
+                maximumSpeed);
+            particle.velocity = {
+                direction.x / directionLength * speed,
+                direction.y / directionLength * speed,
+                direction.z / directionLength * speed
             };
             particle.lifeTime = RandomRange(
                 emitter.settings.particle.lifeTime.min,

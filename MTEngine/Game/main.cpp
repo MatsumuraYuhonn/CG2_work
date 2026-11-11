@@ -10,6 +10,7 @@
 #include "MTEngine/Engine/Scene/SceneSerializer.h"
 #include "MTEngine/Engine/Scene/Scene.h"
 #include "GameCamera.h"
+#include "MeteorEffect.h"
 #include "Player.h"
 
 namespace {
@@ -28,7 +29,8 @@ namespace {
             gameCamera_.Initialize(*GetInput());
             SetActiveCamera(gameCamera_);
 
-            MTEngine::ParticleEffectData particleData;
+            MTEngine::ParticleEffectData particleData =
+                MeteorEffect::CreateTrailData();
             if (!MTEngine::ParticleEffectSerializer::Load(
                 kParticleFilePath,
                 particleData)) {
@@ -46,7 +48,10 @@ namespace {
             const std::vector<MTEngine::ParticleSystem::EmitterId>
                 emitterIds = particleSystem_.GetEmitterIds();
             if (!emitterIds.empty()) {
-                playerEmitterId_ = emitterIds.front();
+                meteorEffect_.Initialize(
+                    GetScene(),
+                    particleSystem_,
+                    emitterIds.front());
             }
 
             particleEditor_.Initialize(
@@ -92,6 +97,7 @@ namespace {
             }
 
             player_.Update(deltaTime);
+            meteorEffect_.Update(deltaTime, *GetInput());
 
             const MTEngine::SceneObject* playerObject =
                 player_.GetSceneObject();
@@ -100,12 +106,6 @@ namespace {
                 gameCamera_.Update(
                     *GetInput(),
                     playerObject->transform.translate);
-
-                if (playerEmitterId_ != 0) {
-                    particleSystem_.SetEmitterPosition(
-                        playerEmitterId_,
-                        playerObject->transform.translate);
-                }
             }
 
             particleSystem_.Update(deltaTime);
@@ -118,7 +118,7 @@ namespace {
         }
 
         void OnFinalize() override {
-            particleEditor_.SaveCurrentData();
+            meteorEffect_.RestoreSceneObject();
             MTEngine::SceneSerializer::Save(
                 kSceneFilePath,
                 GetScene());
@@ -129,13 +129,13 @@ namespace {
             "MTEngine/Assets/Scenes/main.scene.json";
 
         static constexpr const char* kParticleFilePath =
-            "MTEngine/Assets/Particles/fire.json";
+            "MTEngine/Assets/Particles/meteor_trail.json";
 
         using Clock = std::chrono::steady_clock;
 
         MTEngine::ParticleSystem particleSystem_;
         MTEngine::ParticleEditor particleEditor_;
-        MTEngine::ParticleSystem::EmitterId playerEmitterId_ = 0;
+        MeteorEffect meteorEffect_;
         Player player_;
         GameCamera gameCamera_;
         Clock::time_point previousFrameTime_{};
