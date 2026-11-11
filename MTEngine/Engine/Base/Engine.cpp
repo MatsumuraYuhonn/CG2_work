@@ -200,6 +200,7 @@ namespace MTEngine {
             renderer_->GetSrvHeapManager()->GetGPUDescriptorHandle(0));
 
         debugCamera_.Initialize();
+        activeCamera_ = &debugCamera_;
         editor_ = std::make_unique<BaseEditor>();
         editor_->Initialize(
             renderer_->GetSceneTextureHandle(),
@@ -221,15 +222,22 @@ namespace MTEngine {
         imGuiManager_->BeginFrame();
         editor_->Update();
         OnUpdate();
+
+        bool enableDebugCameraControl =
+            activeCamera_ == &debugCamera_;
 #ifdef USE_IMGUI
+        enableDebugCameraControl =
+            enableDebugCameraControl &&
+            editor_->IsSceneViewFocused();
+
         debugCamera_.Update(
             input_.get(),
-            editor_->IsSceneViewFocused(),
+            enableDebugCameraControl,
             window_.ConsumeMouseWheelDelta());
 #else
         debugCamera_.Update(
             input_.get(),
-            true,
+            enableDebugCameraControl,
             window_.ConsumeMouseWheelDelta());
 #endif
         imGuiManager_->EndFrame();
@@ -240,7 +248,7 @@ namespace MTEngine {
         renderer_->BeginScene();
         sceneRenderer_->Draw(
             scene_,
-            debugCamera_,
+            GetActiveCamera(),
             dx12Device_.GetCommandList());
         OnDraw();
         renderer_->EndScene();
