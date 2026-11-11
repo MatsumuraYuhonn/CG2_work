@@ -23,7 +23,8 @@ namespace MTEngine {
         // ゲーム固有オブジェクトをHierarchyとInspectorへ登録する。
         void RegisterGameObject(
             const std::string& name,
-            std::function<void()> drawInspector);
+            std::function<void()> drawInspector,
+            std::function<void()> drawSceneVisualization = {});
 
         bool IsSceneViewFocused() const {
             return isSceneViewFocused_ && !isGizmoUsing_;
@@ -44,6 +45,7 @@ namespace MTEngine {
         struct GameObjectEntry {
             std::string name;
             std::function<void()> drawInspector;
+            std::function<void()> drawSceneVisualization;
         };
 
         struct ModelAssetEntry {

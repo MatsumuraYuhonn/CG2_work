@@ -36,8 +36,13 @@ namespace MTEngine {
 
     void BaseEditor::RegisterGameObject(
         const std::string& name,
-        std::function<void()> drawInspector) {
-        gameObjects_.push_back({ name, std::move(drawInspector) });
+        std::function<void()> drawInspector,
+        std::function<void()> drawSceneVisualization) {
+        gameObjects_.push_back({
+            name,
+            std::move(drawInspector),
+            std::move(drawSceneVisualization)
+        });
     }
 
     void BaseEditor::SetSelectedObjectName(const std::string& name) {
@@ -416,12 +421,7 @@ namespace MTEngine {
                 ImTextureRef(static_cast<ImTextureID>(sceneTextureHandle_.ptr)),
                 sceneSize);
 
-            SceneObject* selectedObject = nullptr;
-            if (scene_ && selectedObjectId_ != 0) {
-                selectedObject = scene_->FindObject(selectedObjectId_);
-            }
-
-            if (selectedObject && debugCamera_) {
+            if (debugCamera_) {
                 ImGuizmo::SetOrthographic(false);
                 ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
                 ImGuizmo::SetRect(
@@ -430,6 +430,26 @@ namespace MTEngine {
                     sceneSize.x,
                     sceneSize.y);
 
+                if (selectedGameObjectIndex_ > 0) {
+                    const size_t gameObjectIndex =
+                        selectedGameObjectIndex_ - 1;
+                    if (gameObjectIndex < gameObjects_.size()) {
+                        const std::function<void()>& drawVisualization =
+                            gameObjects_[gameObjectIndex]
+                                .drawSceneVisualization;
+                        if (drawVisualization) {
+                            drawVisualization();
+                        }
+                    }
+                }
+            }
+
+            SceneObject* selectedObject = nullptr;
+            if (scene_ && selectedObjectId_ != 0) {
+                selectedObject = scene_->FindObject(selectedObjectId_);
+            }
+
+            if (selectedObject && debugCamera_) {
                 Transform& transform = selectedObject->transform;
                 Matrix4x4 world = MakeAffineMatrix(
                     transform.scale,

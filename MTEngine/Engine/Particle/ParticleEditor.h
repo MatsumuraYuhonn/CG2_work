@@ -6,9 +6,12 @@
 
 #include "MTEngine/Engine/Particle/ParticleEffectSerializer.h"
 #include "MTEngine/Engine/Particle/ParticleSystem.h"
+#include "MTEngine/Engine/Debug/DebugCamera.h"
+#include "MTEngine/Engine/Math/Matrix.h"
 
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
+#include "MTEngine/Engine/externals/ImGuizmo/ImGuizmo.h"
 #endif
 
 namespace MTEngine {
@@ -315,6 +318,38 @@ namespace MTEngine {
             if (changed) {
                 Apply();
             }
+#endif
+        }
+
+        void DrawSceneVisualization(const DebugCamera& camera) const {
+#ifdef USE_IMGUI
+            if (selectedEmitterId_ == 0) {
+                return;
+            }
+
+            Vector3 visualizationSize = editingData_.emitter.spawnArea;
+            constexpr float kMinimumVisualizationSize = 0.01f;
+            if (visualizationSize.x < kMinimumVisualizationSize) {
+                visualizationSize.x = kMinimumVisualizationSize;
+            }
+            if (visualizationSize.y < kMinimumVisualizationSize) {
+                visualizationSize.y = kMinimumVisualizationSize;
+            }
+            if (visualizationSize.z < kMinimumVisualizationSize) {
+                visualizationSize.z = kMinimumVisualizationSize;
+            }
+
+            const Matrix4x4 spawnAreaWorld = MakeAffineMatrix(
+                visualizationSize,
+                {},
+                editingData_.emitter.position);
+            ImGuizmo::DrawCubes(
+                &camera.GetViewMatrix().m[0][0],
+                &camera.GetProjectionMatrix().m[0][0],
+                &spawnAreaWorld.m[0][0],
+                1);
+#else
+            (void)camera;
 #endif
         }
 

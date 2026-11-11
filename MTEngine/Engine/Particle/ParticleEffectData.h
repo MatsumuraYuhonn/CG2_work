@@ -47,7 +47,7 @@ namespace MTEngine {
 
     struct ParticleRenderSettings {
         std::string texturePath =
-            "MTEngine/Assets/Resources/uvChecker.png";
+            "MTEngine/Assets/Resources/circle.png";
         ParticleBlendMode blendMode = ParticleBlendMode::Additive;
         bool billboard = true;
     };

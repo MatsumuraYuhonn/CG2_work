@@ -43,6 +43,9 @@
     <Filter Include="Engine\Externals">
       <UniqueIdentifier>{f18386b0-55ab-494d-bf8a-69b082ab3f6a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Particle">
+      <UniqueIdentifier>{4e44f857-82a4-44ae-8694-6464f4a7e6d0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MTEngine\Engine\Audio\Sound.h">
@@ -167,6 +170,18 @@
     </ClInclude>
     <ClInclude Include="MTEngine\Engine\Scene\SceneRenderer.h">
       <Filter>Engine\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="MTEngine\Engine\Particle\ParticleEditor.h">
+      <Filter>Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="MTEngine\Engine\Particle\ParticleEffectData.h">
+      <Filter>Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="MTEngine\Engine\Particle\ParticleEffectSerializer.h">
+      <Filter>Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="MTEngine\Engine\Particle\ParticleSystem.h">
+      <Filter>Engine\Particle</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

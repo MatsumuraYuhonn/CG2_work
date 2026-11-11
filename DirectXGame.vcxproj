@@ -192,6 +192,10 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClInclude Include="MTEngine\Engine\Math\Matrix.h" />
     <ClInclude Include="MTEngine\Engine\Math\Transform.h" />
     <ClInclude Include="MTEngine\Engine\Math\Vector.h" />
+    <ClInclude Include="MTEngine\Engine\Particle\ParticleEditor.h" />
+    <ClInclude Include="MTEngine\Engine\Particle\ParticleEffectData.h" />
+    <ClInclude Include="MTEngine\Engine\Particle\ParticleEffectSerializer.h" />
+    <ClInclude Include="MTEngine\Engine\Particle\ParticleSystem.h" />
     <ClInclude Include="MTEngine\Engine\Scene\Scene.h" />
     <ClInclude Include="MTEngine\Engine\Scene\SceneObject.h" />
     <ClInclude Include="MTEngine\Engine\Scene\SceneRenderer.h" />

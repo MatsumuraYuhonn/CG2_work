@@ -23,7 +23,7 @@ namespace MTEngine {
 
             ParticleEffectData data = source;
             ValidateParticleEffectData(data);
-
+            
             nlohmann::json root;
             root["version"] = data.version;
             root["name"] = data.name;

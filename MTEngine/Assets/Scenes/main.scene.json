@@ -1,3 +1,26 @@
 {
-    "objects": []
+    "objects": [
+        {
+            "id": 1,
+            "modelPath": "MTEngine/Assets/Resources/block/block.obj",
+            "name": "Player",
+            "transform": {
+                "position": [
+                    -0.8349210023880005,
+                    0.0,
+                    -3.739499807357788
+                ],
+                "rotation": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        }
+    ]
 }
