@@ -16,7 +16,7 @@ public:
     void Update(
         float deltaTime,
         const MTEngine::Vector3& playerPosition,
-        const MTEngine::Vector3& aimDirection);
+        const MTEngine::Vector3& targetPosition);
 
     void Clear();
 
@@ -29,7 +29,7 @@ private:
 
     void Fire(
         const MTEngine::Vector3& playerPosition,
-        const MTEngine::Vector3& aimDirection);
+        const MTEngine::Vector3& targetPosition);
 
     void UpdateBullets(float deltaTime);
 

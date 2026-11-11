@@ -8,6 +8,7 @@
 #include "MTEngine/Engine/Scene/SceneObject.h"
 #include "MTEngine/Engine/Scene/SceneSerializer.h"
 #include "MTEngine/Engine/Scene/Scene.h"
+#include "PlayerBulletManager.h"
 #include "GameCamera.h"
 #include "Player.h"
 
@@ -23,6 +24,8 @@ namespace {
             player_.Initialize(
                 GetScene(),
                 *GetInput());
+
+            playerBulletManager_.Initialize(GetScene());
 
             gameCamera_.Initialize(*GetInput());
             SetActiveCamera(gameCamera_);
@@ -93,6 +96,16 @@ namespace {
                 gameCamera_.Update(
                     *GetInput(),
                     playerObject->transform.translate);
+
+                const MTEngine::SceneObject* enemyObject =
+                    FindEnemyObject();
+
+                if (enemyObject) {
+                    playerBulletManager_.Update(
+                        deltaTime,
+                        playerObject->transform.translate,
+                        enemyObject->transform.translate);
+                }
             }
 
             particleSystem_.Update(deltaTime);
@@ -105,6 +118,7 @@ namespace {
         }
 
         void OnFinalize() override {
+            playerBulletManager_.Clear();
             particleEditor_.SaveCurrentData();
             MTEngine::SceneSerializer::Save(
                 kSceneFilePath,
@@ -112,17 +126,32 @@ namespace {
         }
 
     private:
+        const MTEngine::SceneObject* FindEnemyObject() {
+            for (const MTEngine::SceneObject& object :
+                 GetScene().GetObjects()) {
+                if (object.modelPath == kEnemyModelPath) {
+                    return &object;
+                }
+            }
+
+            return nullptr;
+        }
+
         static constexpr const char* kSceneFilePath =
             "MTEngine/Assets/Scenes/main.scene.json";
 
         static constexpr const char* kParticleFilePath =
             "MTEngine/Assets/Particles/fire.json";
 
+        static constexpr const char* kEnemyModelPath =
+            "MTEngine/Assets/Resources/bunny.obj";
+
         using Clock = std::chrono::steady_clock;
 
         MTEngine::ParticleSystem particleSystem_;
         MTEngine::ParticleEditor particleEditor_;
         Player player_;
+        PlayerBulletManager playerBulletManager_;
         GameCamera gameCamera_;
         Clock::time_point previousFrameTime_{};
         bool isGameCameraActive_ = true;

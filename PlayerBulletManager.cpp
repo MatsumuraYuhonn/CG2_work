@@ -18,7 +18,7 @@ bool PlayerBulletManager::Initialize(
 void PlayerBulletManager::Update(
     float deltaTime,
     const MTEngine::Vector3& playerPosition,
-    const MTEngine::Vector3& aimDirection) {
+    const MTEngine::Vector3& targetPosition) {
 
     if (!scene_) {
         return;
@@ -27,7 +27,7 @@ void PlayerBulletManager::Update(
     fireTimer_ -= deltaTime;
 
     if (fireTimer_ <= 0.0f) {
-        Fire(playerPosition, aimDirection);
+        Fire(playerPosition, targetPosition);
         fireTimer_ = kFireInterval;
     }
 
@@ -36,25 +36,34 @@ void PlayerBulletManager::Update(
 
 void PlayerBulletManager::Fire(
     const MTEngine::Vector3& playerPosition,
-    const MTEngine::Vector3& aimDirection) {
+    const MTEngine::Vector3& targetPosition) {
 
     if (!scene_) {
         return;
     }
 
+    MTEngine::Vector3 spawnPosition{};
+    spawnPosition.x = playerPosition.x;
+    spawnPosition.y = playerPosition.y + 0.5f;
+    spawnPosition.z = playerPosition.z;
+
+    MTEngine::Vector3 direction{};
+    direction.x = targetPosition.x - spawnPosition.x;
+    direction.y = targetPosition.y - spawnPosition.y;
+    direction.z = targetPosition.z - spawnPosition.z;
+
     const float directionLength = std::sqrt(
-        aimDirection.x * aimDirection.x +
-        aimDirection.y * aimDirection.y +
-        aimDirection.z * aimDirection.z);
+        direction.x * direction.x +
+        direction.y * direction.y +
+        direction.z * direction.z);
 
     if (directionLength <= 0.001f) {
         return;
     }
 
-    MTEngine::Vector3 direction{};
-    direction.x = aimDirection.x / directionLength;
-    direction.y = aimDirection.y / directionLength;
-    direction.z = aimDirection.z / directionLength;
+    direction.x /= directionLength;
+    direction.y /= directionLength;
+    direction.z /= directionLength;
 
     const uint64_t objectId = scene_->CreateObject(
         "PlayerBullet",
@@ -68,13 +77,13 @@ void PlayerBulletManager::Fire(
     }
 
     object->transform.translate.x =
-        playerPosition.x + direction.x * kSpawnDistance;
+        spawnPosition.x + direction.x * kSpawnDistance;
 
     object->transform.translate.y =
-        playerPosition.y + 0.5f;
+        spawnPosition.y + direction.y * kSpawnDistance;
 
     object->transform.translate.z =
-        playerPosition.z + direction.z * kSpawnDistance;
+        spawnPosition.z + direction.z * kSpawnDistance;
 
     object->transform.scale = {
         0.2f,

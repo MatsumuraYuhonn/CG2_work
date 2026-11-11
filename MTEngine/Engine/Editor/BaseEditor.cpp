@@ -23,6 +23,9 @@ namespace MTEngine {
         constexpr const char* kModelAssetDirectory =
             "MTEngine/Assets/Resources";
 
+        constexpr const char* kHiddenPlayerBulletName =
+            "PlayerBullet";
+
     }
 
     void BaseEditor::Initialize(
@@ -275,6 +278,10 @@ namespace MTEngine {
             }
 
             for (const SceneObject& object : objects) {
+                if (object.name == kHiddenPlayerBulletName) {
+                    continue;
+                }
+
                 const bool isSelected =
                     !isDebugCameraSelected_ &&
                     selectedObjectId_ == object.id;
