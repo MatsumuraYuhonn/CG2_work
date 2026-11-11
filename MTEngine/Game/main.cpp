@@ -1,5 +1,6 @@
 #include <chrono>
 #include <memory>
+#include <vector>
 
 #include "MTEngine/Engine/Base/Engine.h"
 #include "MTEngine/Engine/Particle/ParticleEditor.h"
@@ -41,6 +42,12 @@ namespace {
                 GetRenderer()->GetSrvHeapManager(),
                 GetCommandList(),
                 particleData);
+
+            const std::vector<MTEngine::ParticleSystem::EmitterId>
+                emitterIds = particleSystem_.GetEmitterIds();
+            if (!emitterIds.empty()) {
+                playerEmitterId_ = emitterIds.front();
+            }
 
             particleEditor_.Initialize(
                 &particleSystem_,
@@ -93,6 +100,12 @@ namespace {
                 gameCamera_.Update(
                     *GetInput(),
                     playerObject->transform.translate);
+
+                if (playerEmitterId_ != 0) {
+                    particleSystem_.SetEmitterPosition(
+                        playerEmitterId_,
+                        playerObject->transform.translate);
+                }
             }
 
             particleSystem_.Update(deltaTime);
@@ -122,6 +135,7 @@ namespace {
 
         MTEngine::ParticleSystem particleSystem_;
         MTEngine::ParticleEditor particleEditor_;
+        MTEngine::ParticleSystem::EmitterId playerEmitterId_ = 0;
         Player player_;
         GameCamera gameCamera_;
         Clock::time_point previousFrameTime_{};

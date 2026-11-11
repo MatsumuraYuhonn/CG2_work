@@ -221,6 +221,20 @@ namespace MTEngine {
             return &emitter->settings;
         }
 
+        bool SetEmitterPosition(
+            EmitterId emitterId,
+            const Vector3& position) {
+            Emitter* emitter = FindEmitter(emitterId);
+            if (!emitter) {
+                lastError_ = "Particle emitter is not available";
+                return false;
+            }
+
+            emitter->settings.emitter.position = position;
+            lastError_.clear();
+            return true;
+        }
+
         void Update(float deltaTime) {
             if (!isInitialized_ || !isPlaying_) {
                 return;

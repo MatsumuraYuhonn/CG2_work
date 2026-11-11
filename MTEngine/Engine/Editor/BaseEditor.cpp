@@ -684,7 +684,7 @@ namespace MTEngine {
         ImGui::TextDisabled("| %.1f FPS", ImGui::GetIO().Framerate);
         ImGui::Separator();
         ImGui::TextWrapped(
-            "Add game-specific panels from GameApplication::OnUpdate().");
+            "Press F11 to switch between the game camera and debug camera.");
         ImGui::End();
 #else
         isSceneViewFocused_ = true;

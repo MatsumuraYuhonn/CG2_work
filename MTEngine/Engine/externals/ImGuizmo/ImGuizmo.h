@@ -180,7 +180,7 @@ namespace IMGUIZMO_NAMESPACE
    // Render coordinate system axes (red X, green Y and blue Z). Usefull for debug/tests
    IMGUI_API void DrawAxes(const float* view, const float* projection, const float* matrices, int matrixCount);
    // Render a cube with face color corresponding to face normal. Usefull for debug/tests
-   IMGUI_API void DrawCubes(const float* view, const float* projection, const float* matrices, int matrixCount);
+   IMGUI_API void DrawCubes(const float* view, const float* projection, const float* matrices, int matrixCount, bool wireframe = false);
    IMGUI_API void DrawGrid(const float* view, const float* projection, const float* matrix, const float gridSize);
    // Render grid with customizable major line step and amount of segments between major lines.
    // NOTE(m.wlasiuk) : calling this function with majorStep = 1.0f and subdivision = 1 is equivalent to DrawGrid in terms of the end result but performs more calculations

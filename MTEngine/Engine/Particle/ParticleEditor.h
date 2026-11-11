@@ -27,7 +27,6 @@ namespace MTEngine {
             filePath_ = filePath;
             editingData_ = data;
             CopyText(filePathBuffer_, sizeof(filePathBuffer_), filePath_);
-            CopyText(nameBuffer_, sizeof(nameBuffer_), editingData_.name);
             CopyText(
                 texturePathBuffer_,
                 sizeof(texturePathBuffer_),
@@ -175,18 +174,6 @@ namespace MTEngine {
             bool changed = false;
 
             if (ImGui::CollapsingHeader(
-                "Effect",
-                ImGuiTreeNodeFlags_DefaultOpen)) {
-                if (ImGui::InputText(
-                    "Name",
-                    nameBuffer_,
-                    sizeof(nameBuffer_))) {
-                    editingData_.name = nameBuffer_;
-                    changed = true;
-                }
-            }
-
-            if (ImGui::CollapsingHeader(
                 "Emitter",
                 ImGuiTreeNodeFlags_DefaultOpen)) {
                 changed |= ImGui::DragFloat3(
@@ -323,11 +310,17 @@ namespace MTEngine {
 
         void DrawSceneVisualization(const DebugCamera& camera) const {
 #ifdef USE_IMGUI
-            if (selectedEmitterId_ == 0) {
+            if (!particleSystem_ || selectedEmitterId_ == 0) {
                 return;
             }
 
-            Vector3 visualizationSize = editingData_.emitter.spawnArea;
+            const ParticleEffectData* emitterData =
+                particleSystem_->GetEmitterData(selectedEmitterId_);
+            if (!emitterData) {
+                return;
+            }
+
+            Vector3 visualizationSize = emitterData->emitter.spawnArea;
             constexpr float kMinimumVisualizationSize = 0.01f;
             if (visualizationSize.x < kMinimumVisualizationSize) {
                 visualizationSize.x = kMinimumVisualizationSize;
@@ -342,12 +335,13 @@ namespace MTEngine {
             const Matrix4x4 spawnAreaWorld = MakeAffineMatrix(
                 visualizationSize,
                 {},
-                editingData_.emitter.position);
+                emitterData->emitter.position);
             ImGuizmo::DrawCubes(
                 &camera.GetViewMatrix().m[0][0],
                 &camera.GetProjectionMatrix().m[0][0],
                 &spawnAreaWorld.m[0][0],
-                1);
+                1,
+                true);
 #else
             (void)camera;
 #endif
@@ -398,7 +392,6 @@ namespace MTEngine {
             }
 
             editingData_ = loaded;
-            CopyText(nameBuffer_, sizeof(nameBuffer_), editingData_.name);
             CopyText(
                 texturePathBuffer_,
                 sizeof(texturePathBuffer_),
@@ -412,7 +405,6 @@ namespace MTEngine {
 
         void Save() {
             filePath_ = filePathBuffer_;
-            editingData_.name = nameBuffer_;
             editingData_.render.texturePath = texturePathBuffer_;
             ValidateParticleEffectData(editingData_);
             if (!ParticleEffectSerializer::Save(filePath_, editingData_)) {
@@ -439,7 +431,6 @@ namespace MTEngine {
             }
             selectedEmitterId_ = emitterId;
             editingData_ = *emitterData;
-            CopyText(nameBuffer_, sizeof(nameBuffer_), editingData_.name);
             CopyText(
                 texturePathBuffer_,
                 sizeof(texturePathBuffer_),
@@ -464,7 +455,6 @@ namespace MTEngine {
         std::string statusMessage_;
         bool statusIsError_ = false;
         char filePathBuffer_[512]{};
-        char nameBuffer_[128]{};
         char texturePathBuffer_[512]{};
     };
 

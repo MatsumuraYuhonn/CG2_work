@@ -2877,7 +2877,7 @@ namespace IMGUIZMO_NAMESPACE
       }
    }
 
-   void DrawCubes(const float* view, const float* projection, const float* matrices, int matrixCount)
+   void DrawCubes(const float* view, const float* projection, const float* matrices, int matrixCount, bool wireframe)
    {
       matrix_t viewInverse;
       viewInverse.Inverse(*(matrix_t*)view);
@@ -2999,7 +2999,19 @@ namespace IMGUIZMO_NAMESPACE
       for (int iFace = 0; iFace < cubeFaceCount; iFace++)
       {
          const CubeFace& cubeFace = faces[iFace];
-         gContext.mDrawList->AddConvexPolyFilled(cubeFace.faceCoordsScreen, 4, cubeFace.color);
+         if (wireframe)
+         {
+            gContext.mDrawList->AddPolyline(
+               cubeFace.faceCoordsScreen,
+               4,
+               cubeFace.color,
+               1.0f,
+               ImDrawFlags_Closed);
+         }
+         else
+         {
+            gContext.mDrawList->AddConvexPolyFilled(cubeFace.faceCoordsScreen, 4, cubeFace.color);
+         }
       }
 
       _freea(faces);

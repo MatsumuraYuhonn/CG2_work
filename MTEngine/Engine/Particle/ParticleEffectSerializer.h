@@ -26,7 +26,6 @@ namespace MTEngine {
             
             nlohmann::json root;
             root["version"] = data.version;
-            root["name"] = data.name;
             root["emitter"] = {
                 {"position", ToJson(data.emitter.position)},
                 {"spawnArea", ToJson(data.emitter.spawnArea)},
@@ -92,8 +91,6 @@ namespace MTEngine {
                 if (loaded.version != ParticleEffectData::kCurrentVersion) {
                     return false;
                 }
-
-                loaded.name = root.at("name").get<std::string>();
 
                 const nlohmann::json& emitter = root.at("emitter");
                 loaded.emitter.position =

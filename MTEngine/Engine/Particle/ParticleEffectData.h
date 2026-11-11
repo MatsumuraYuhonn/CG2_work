@@ -57,7 +57,6 @@ namespace MTEngine {
         static constexpr uint32_t kMaximumParticleLimit = 4096;
 
         int version = kCurrentVersion;
-        std::string name = "Fire";
         ParticleEmitterSettings emitter;
         ParticleMotionSettings particle;
         ParticleRenderSettings render;
