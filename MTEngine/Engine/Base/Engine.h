@@ -67,6 +67,16 @@ namespace MTEngine {
         BaseEditor* GetEditor() const { return editor_.get(); }
         AudioManager* GetAudioManager() const { return audioManager_.get(); }
         DebugCamera& GetDebugCamera() { return debugCamera_; }
+        DebugCamera& GetActiveCamera() {
+            if (activeCamera_) {
+                return *activeCamera_;
+            }
+
+            return debugCamera_;
+        }
+        void SetActiveCamera(DebugCamera& camera) {
+            activeCamera_ = &camera;
+        }
         Scene& GetScene() { return scene_; }
         ID3D12Device* GetDevice() const { return dx12Device_.GetDevice().Get(); }
         ID3D12GraphicsCommandList* GetCommandList() const {
@@ -95,6 +105,7 @@ namespace MTEngine {
         std::unique_ptr<BaseEditor> editor_;
         std::unique_ptr<AudioManager> audioManager_;
         DebugCamera debugCamera_;
+        DebugCamera* activeCamera_ = nullptr;
     };
 
 }

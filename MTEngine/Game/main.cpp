@@ -1,6 +1,5 @@
 #include <chrono>
 #include <memory>
-#include <cmath>
 
 #include "MTEngine/Engine/Base/Engine.h"
 #include "MTEngine/Engine/Particle/ParticleEditor.h"
@@ -9,6 +8,8 @@
 #include "MTEngine/Engine/Scene/SceneObject.h"
 #include "MTEngine/Engine/Scene/SceneSerializer.h"
 #include "MTEngine/Engine/Scene/Scene.h"
+#include "GameCamera.h"
+#include "Player.h"
 
 namespace {
 
@@ -19,12 +20,12 @@ namespace {
                 kSceneFilePath,
                 GetScene());
 
-            for (const MTEngine::SceneObject& object : GetScene().GetObjects()) {
-                if (object.name == "Player") {
-                    playerId_ = object.id;
-                    break;
-                }
-            }
+            player_.Initialize(
+                GetScene(),
+                *GetInput());
+
+            gameCamera_.Initialize(*GetInput());
+            SetActiveCamera(gameCamera_);
 
             MTEngine::ParticleEffectData particleData;
             if (!MTEngine::ParticleEffectSerializer::Load(
@@ -47,13 +48,19 @@ namespace {
                 particleData);
 
             GetEditor()->RegisterGameObject(
+                "Game Camera",
+                [this]() {
+                    gameCamera_.DrawInspector();
+                });
+
+            GetEditor()->RegisterGameObject(
                 "Particle Emitter",
                 [this]() {
                     particleEditor_.Draw();
                 },
                 [this]() {
                     particleEditor_.DrawSceneVisualization(
-                        GetDebugCamera());
+                        GetActiveCamera());
                 });
 
             previousFrameTime_ = Clock::now();
@@ -65,72 +72,36 @@ namespace {
                 currentTime - previousFrameTime_;
             previousFrameTime_ = currentTime;
 
-            MTEngine::SceneObject* player =
-                GetScene().FindObject(playerId_);
+            const float deltaTime = elapsed.count();
 
-            if (player) {
-                float moveX = 0.0f;
-                float moveZ = 0.0f;
-
-                MTEngine::Input* input = GetInput();
-
-                // キーボード
-                if (input->PushKey(DIK_W)) {
-                    moveZ += 1.0f;
+            if (GetInput()->TriggerKey(DIK_F11)) {
+                if (isGameCameraActive_) {
+                    SetActiveCamera(GetDebugCamera());
+                    isGameCameraActive_ = false;
+                } else {
+                    SetActiveCamera(gameCamera_);
+                    isGameCameraActive_ = true;
                 }
-                if (input->PushKey(DIK_S)) {
-                    moveZ -= 1.0f;
-                }
-                if (input->PushKey(DIK_D)) {
-                    moveX += 1.0f;
-                }
-                if (input->PushKey(DIK_A)) {
-                    moveX -= 1.0f;
-                }
-
-                // コントローラー
-                const MTEngine::GamePad* gamePad = input->GetGamePad();
-                if (gamePad && gamePad->IsConnected()) {
-                    const MTEngine::StickState& stick =
-                        gamePad->GetLeftStick();
-
-                    moveX += stick.x;
-                    moveZ += stick.y;
-                }
-
-                // 斜め移動が速くならないよう正規化
-                const float length =
-                    std::sqrt(moveX * moveX + moveZ * moveZ);
-
-                if (length > 1.0f) {
-                    moveX /= length;
-                    moveZ /= length;
-                }
-
-                player->transform.translate.x +=
-                    moveX * kPlayerSpeed * elapsed.count();
-
-                player->transform.translate.z +=
-                    moveZ * kPlayerSpeed * elapsed.count();
-
-                // 移動方向を向かせる場合
-                if (length > 0.001f) {
-                    player->transform.rotate.y =
-                        std::atan2(moveX, moveZ);
-                }
-
-                // デバッグカメラで追従する場合
-                GetDebugCamera().SetTarget(
-                    player->transform.translate);
             }
 
-            particleSystem_.Update(elapsed.count());
+            player_.Update(deltaTime);
+
+            const MTEngine::SceneObject* playerObject =
+                player_.GetSceneObject();
+
+            if (playerObject) {
+                gameCamera_.Update(
+                    *GetInput(),
+                    playerObject->transform.translate);
+            }
+
+            particleSystem_.Update(deltaTime);
         }
 
         void OnDraw() override {
             particleSystem_.Draw(
                 GetRenderer(),
-                GetDebugCamera());
+                GetActiveCamera());
         }
 
         void OnFinalize() override {
@@ -151,10 +122,10 @@ namespace {
 
         MTEngine::ParticleSystem particleSystem_;
         MTEngine::ParticleEditor particleEditor_;
+        Player player_;
+        GameCamera gameCamera_;
         Clock::time_point previousFrameTime_{};
-
-        uint64_t playerId_ = 0;
-        static constexpr float kPlayerSpeed = 5.0f;
+        bool isGameCameraActive_ = true;
 
     };
 }

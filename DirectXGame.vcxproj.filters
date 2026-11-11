@@ -183,6 +183,13 @@
     <ClInclude Include="MTEngine\Engine\Particle\ParticleSystem.h">
       <Filter>Engine\Particle</Filter>
     </ClInclude>
+    <ClInclude Include="MTEngine\Game\GameCamera.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="MTEngine\Game\Player.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerBulletManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MTEngine\Engine\Audio\Sound.cpp">
@@ -245,6 +252,9 @@
     <ClCompile Include="MTEngine\Engine\externals\ImGuizmo\ImGuizmo.cpp">
       <Filter>Engine\Externals</Filter>
     </ClCompile>
+    <ClCompile Include="MTEngine\Game\GameCamera.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
     <ClCompile Include="MTEngine\Game\main.cpp">
       <Filter>Game</Filter>
     </ClCompile>
@@ -296,6 +306,10 @@
     <ClCompile Include="MTEngine\Engine\Scene\SceneRenderer.cpp">
       <Filter>Engine\Scene</Filter>
     </ClCompile>
+    <ClCompile Include="MTEngine\Game\Player.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerBulletManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt">
