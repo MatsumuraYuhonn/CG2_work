@@ -55,22 +55,22 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>.\x64\Debug\</OutDir>
-    <IntDir>$(ProjectDir)bin-int\Debug\</IntDir>
+    <OutDir>$(SolutionDir)..\generated\outputs\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\generated\obj\$(ProjectName)\$(Configuration)\</IntDir>
     <TargetName>DirectXGame</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>.\x64\Release\</OutDir>
-    <IntDir>$(ProjectDir)bin-int\Release\</IntDir>
+    <OutDir>$(SolutionDir)..\generated\outputs\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\generated\obj\$(ProjectName)\$(Configuration)\</IntDir>
     <TargetName>DirectXGame</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Development|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>.\x64\Release\</OutDir>
-    <IntDir>$(ProjectDir)bin-int\Release\</IntDir>
+    <OutDir>$(SolutionDir)..\generated\outputs\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\generated\obj\$(ProjectName)\$(Configuration)\</IntDir>
     <TargetName>DirectXGame</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
@@ -94,6 +94,11 @@
     </Link>
     <ProjectReference>
     </ProjectReference>
+    <PostBuildEvent>
+      <Command>xcopy /E /I /Y /D "$(ProjectDir)MTEngine\Assets" "$(OutDir)MTEngine\Assets\"
+copy /Y "$(ProjectDir)externals\libs\dxcompiler.dll" "$(OutDir)"
+copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
