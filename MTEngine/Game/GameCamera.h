@@ -17,6 +17,6 @@ public:
     void DrawInspector();
 
 private:
-    static constexpr float kDistance = 50.0f;
-    static constexpr float kPitch = 1.0f;
+    static constexpr float kDistance = 75.0f;
+    static constexpr float kPitch = 0.366519f;
 };

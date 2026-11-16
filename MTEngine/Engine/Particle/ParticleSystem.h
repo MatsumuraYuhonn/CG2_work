@@ -68,6 +68,7 @@ namespace MTEngine {
             particles_.reserve(settings_.emitter.maxParticles);
             Emitter emitter;
             emitter.id = nextEmitterId_++;
+            SetDefaultEmitterName(settings_, emitter.id);
             emitter.settings = settings_;
             emitter.textureHandle = textureHandle;
             emitters_.push_back(emitter);
@@ -100,6 +101,7 @@ namespace MTEngine {
 
             ParticleEffectData settings = source;
             ValidateParticleEffectData(settings);
+            SetDefaultEmitterName(settings, emitterId);
 
             D3D12_GPU_DESCRIPTOR_HANDLE textureHandle =
                 emitter->textureHandle;
@@ -174,6 +176,7 @@ namespace MTEngine {
 
             Emitter emitter;
             emitter.id = nextEmitterId_++;
+            SetDefaultEmitterName(validatedData, emitter.id);
             emitter.settings = validatedData;
             emitter.textureHandle = textureHandle;
             emitters_.push_back(emitter);
@@ -566,6 +569,16 @@ namespace MTEngine {
         struct ParticleCameraData {
             Matrix4x4 viewProjection;
         };
+
+        static void SetDefaultEmitterName(
+            ParticleEffectData& data,
+            EmitterId emitterId) {
+            if (!data.emitter.name.empty()) {
+                return;
+            }
+            data.emitter.name =
+                "Emitter " + std::to_string(emitterId);
+        }
 
         static size_t AlignConstantBufferSize(size_t size) {
             return (size + 255) & ~static_cast<size_t>(255);

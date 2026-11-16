@@ -106,6 +106,10 @@ namespace {
                 gameCamera_.Update(
                     *GetInput(),
                     playerObject->transform.translate);
+            } else {
+                gameCamera_.Update(
+                    *GetInput(),
+                    kGameCameraTarget);
             }
 
             particleSystem_.Update(deltaTime);
@@ -130,6 +134,10 @@ namespace {
 
         static constexpr const char* kParticleFilePath =
             "MTEngine/Assets/Particles/meteor_trail.json";
+
+        static constexpr MTEngine::Vector3 kGameCameraTarget = {
+            0.0f, 0.0f, 0.0f
+        };
 
         using Clock = std::chrono::steady_clock;
 

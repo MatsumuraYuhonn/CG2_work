@@ -202,7 +202,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClInclude Include="MTEngine\Engine\Scene\SceneSerializer.h" />
     <ClInclude Include="MTEngine\Game\GameCamera.h" />
     <ClInclude Include="MTEngine\Game\Player.h" />
-    <ClInclude Include="PlayerBulletManager.h" />
+    <ClInclude Include="MTEngine\Game\PlayerBulletManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="externals\imgui\imgui.cpp" />
@@ -244,7 +244,7 @@ copy /Y "$(ProjectDir)externals\libs\dxil.dll" "$(OutDir)"</Command>
     <ClCompile Include="MTEngine\Game\GameCamera.cpp" />
     <ClCompile Include="MTEngine\Game\main.cpp" />
     <ClCompile Include="MTEngine\Game\Player.cpp" />
-    <ClCompile Include="PlayerBulletManager.cpp" />
+    <ClCompile Include="MTEngine\Game\PlayerBulletManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj">

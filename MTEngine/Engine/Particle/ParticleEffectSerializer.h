@@ -27,6 +27,7 @@ namespace MTEngine {
             nlohmann::json root;
             root["version"] = data.version;
             root["emitter"] = {
+                {"name", data.emitter.name},
                 {"position", ToJson(data.emitter.position)},
                 {"spawnArea", ToJson(data.emitter.spawnArea)},
                 {"spawnRate", data.emitter.spawnRate},
@@ -93,6 +94,10 @@ namespace MTEngine {
                 }
 
                 const nlohmann::json& emitter = root.at("emitter");
+                if (emitter.contains("name")) {
+                    loaded.emitter.name =
+                        emitter.at("name").get<std::string>();
+                }
                 loaded.emitter.position =
                     ReadVector3(emitter.at("position"));
                 loaded.emitter.spawnArea =

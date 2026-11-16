@@ -35,7 +35,7 @@ namespace MTEngine {
                 const std::vector<ParticleSystem::EmitterId> emitterIds =
                     particleSystem_->GetEmitterIds();
                 if (!emitterIds.empty()) {
-                    selectedEmitterId_ = emitterIds.front();
+                    SelectEmitter(emitterIds.front());
                 }
             }
             statusMessage_ = "Particle editor ready";
@@ -67,11 +67,14 @@ namespace MTEngine {
             if (particleSystem_) {
                 char selectedEmitterLabel[64]{};
                 if (selectedEmitterId_ != 0) {
-                    std::snprintf(
-                        selectedEmitterLabel,
-                        sizeof(selectedEmitterLabel),
-                        "Emitter %llu",
-                        static_cast<unsigned long long>(selectedEmitterId_));
+                    const ParticleEffectData* selectedEmitterData =
+                        particleSystem_->GetEmitterData(selectedEmitterId_);
+                    if (selectedEmitterData) {
+                        CopyText(
+                            selectedEmitterLabel,
+                            sizeof(selectedEmitterLabel),
+                            selectedEmitterData->emitter.name);
+                    }
                 } else {
                     CopyText(
                         selectedEmitterLabel,
@@ -85,11 +88,17 @@ namespace MTEngine {
                     const std::vector<ParticleSystem::EmitterId> emitterIds =
                         particleSystem_->GetEmitterIds();
                     for (ParticleSystem::EmitterId emitterId : emitterIds) {
-                        char emitterLabel[64]{};
+                        const ParticleEffectData* emitterData =
+                            particleSystem_->GetEmitterData(emitterId);
+                        if (!emitterData) {
+                            continue;
+                        }
+                        char emitterLabel[192]{};
                         std::snprintf(
                             emitterLabel,
                             sizeof(emitterLabel),
-                            "Emitter %llu",
+                            "%s##Emitter%llu",
+                            emitterData->emitter.name.c_str(),
                             static_cast<unsigned long long>(emitterId));
                         const bool isSelected =
                             emitterId == selectedEmitterId_;
@@ -176,6 +185,13 @@ namespace MTEngine {
             if (ImGui::CollapsingHeader(
                 "Emitter",
                 ImGuiTreeNodeFlags_DefaultOpen)) {
+                if (ImGui::InputText(
+                    "Name",
+                    emitterNameBuffer_,
+                    sizeof(emitterNameBuffer_))) {
+                    editingData_.emitter.name = emitterNameBuffer_;
+                    changed = true;
+                }
                 changed |= ImGui::DragFloat3(
                     "Position",
                     &editingData_.emitter.position.x,
@@ -379,6 +395,15 @@ namespace MTEngine {
                 SetError(particleSystem_->GetLastError());
                 return;
             }
+            const ParticleEffectData* appliedData =
+                particleSystem_->GetEmitterData(selectedEmitterId_);
+            if (appliedData) {
+                editingData_ = *appliedData;
+                CopyText(
+                    emitterNameBuffer_,
+                    sizeof(emitterNameBuffer_),
+                    editingData_.emitter.name);
+            }
             statusMessage_ = "Applied to runtime";
             statusIsError_ = false;
         }
@@ -392,6 +417,10 @@ namespace MTEngine {
             }
 
             editingData_ = loaded;
+            CopyText(
+                emitterNameBuffer_,
+                sizeof(emitterNameBuffer_),
+                editingData_.emitter.name);
             CopyText(
                 texturePathBuffer_,
                 sizeof(texturePathBuffer_),
@@ -432,6 +461,10 @@ namespace MTEngine {
             selectedEmitterId_ = emitterId;
             editingData_ = *emitterData;
             CopyText(
+                emitterNameBuffer_,
+                sizeof(emitterNameBuffer_),
+                editingData_.emitter.name);
+            CopyText(
                 texturePathBuffer_,
                 sizeof(texturePathBuffer_),
                 editingData_.render.texturePath);
@@ -455,6 +488,7 @@ namespace MTEngine {
         std::string statusMessage_;
         bool statusIsError_ = false;
         char filePathBuffer_[512]{};
+        char emitterNameBuffer_[128]{};
         char texturePathBuffer_[512]{};
     };
 

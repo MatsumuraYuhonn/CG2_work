@@ -53,7 +53,7 @@ namespace MTEngine {
 
         static constexpr const wchar_t* kWindowClassName = L"CG2WindowClass";
         static constexpr const wchar_t* kWindowTitle =
-            L"LE2A_25_マツムラ_ユホン";
+            L"LE2B_27_マツムラ_ユホン";
 
         HWND hwnd_ = nullptr;
         HINSTANCE instance_ = nullptr;

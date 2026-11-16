@@ -24,6 +24,7 @@ namespace MTEngine {
     };
 
     struct ParticleEmitterSettings {
+        std::string name;
         Vector3 position{};
         Vector3 spawnArea{ 1.0f, 1.0f, 1.0f };
         float spawnRate = 30.0f;

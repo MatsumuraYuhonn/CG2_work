@@ -189,7 +189,9 @@
     <ClInclude Include="MTEngine\Game\Player.h">
       <Filter>Game</Filter>
     </ClInclude>
-    <ClInclude Include="PlayerBulletManager.h" />
+    <ClInclude Include="MTEngine\Game\PlayerBulletManager.h">
+      <Filter>Game</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MTEngine\Engine\Audio\Sound.cpp">
@@ -309,7 +311,9 @@
     <ClCompile Include="MTEngine\Game\Player.cpp">
       <Filter>Game</Filter>
     </ClCompile>
-    <ClCompile Include="PlayerBulletManager.cpp" />
+    <ClCompile Include="MTEngine\Game\PlayerBulletManager.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt">

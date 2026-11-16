@@ -209,7 +209,7 @@ private:
 
         particleSystem_->SetEmitterPosition(
             trailEmitterId_,
-            meteorObject->transform.translate);
+            GetTrailEmitterPosition(*meteorObject));
 
         const float radius =
             kBaseMeteorRadius * meteorObject->transform.scale.y;
@@ -290,7 +290,7 @@ private:
             kTrailSpawnRate);
         particleSystem_->SetEmitterPosition(
             trailEmitterId_,
-            meteorObject->transform.translate);
+            GetTrailEmitterPosition(*meteorObject));
 
         particleSystem_->Restart(explosionEmitterId_);
         particleSystem_->SetPlaying(explosionEmitterId_, false);
@@ -323,6 +323,30 @@ private:
             return nullptr;
         }
         return scene_->FindObject(meteorObjectId_);
+    }
+
+    MTEngine::Vector3 GetTrailEmitterPosition(
+        const MTEngine::SceneObject& meteorObject) const {
+
+        MTEngine::Vector3 emitterPosition =
+            meteorObject.transform.translate;
+        const float speed = std::sqrt(
+            meteorVelocity_.x * meteorVelocity_.x +
+            meteorVelocity_.y * meteorVelocity_.y +
+            meteorVelocity_.z * meteorVelocity_.z);
+        if (speed <= 0.0f) {
+            return emitterPosition;
+        }
+
+        const float trailOffset =
+            kBaseMeteorRadius * meteorObject.transform.scale.y;
+        emitterPosition.x -=
+            meteorVelocity_.x / speed * trailOffset;
+        emitterPosition.y -=
+            meteorVelocity_.y / speed * trailOffset;
+        emitterPosition.z -=
+            meteorVelocity_.z / speed * trailOffset;
+        return emitterPosition;
     }
 
     static constexpr float kGravity = -9.8f;
