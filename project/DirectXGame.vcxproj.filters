@@ -189,7 +189,21 @@
     <ClInclude Include="MTEngine\Game\Player.h">
       <Filter>Game</Filter>
     </ClInclude>
-    <ClInclude Include="PlayerBulletManager.h" />
+    <ClInclude Include="TitleScnene.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="ClearScene.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOverScene.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="GameScene.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerBulletManager.h">
+      <Filter>Game</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MTEngine\Engine\Audio\Sound.cpp">
@@ -309,7 +323,21 @@
     <ClCompile Include="MTEngine\Game\Player.cpp">
       <Filter>Game</Filter>
     </ClCompile>
-    <ClCompile Include="PlayerBulletManager.cpp" />
+    <ClCompile Include="ClearScene.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="GameOverScene.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="GameScene.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerBulletManager.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="TitleScnene.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt">
