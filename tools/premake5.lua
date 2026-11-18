@@ -4,8 +4,8 @@ workspace "DirectXGame"
 
     -- 出力先ディレクトリの共通変数定義
     -- $(OutDir) や $(IntDir) に相当するパスを設定します
-    targetdir ("bin/" .. "%{cfg.buildcfg}")
-    objdir ("bin-int/" .. "%{cfg.buildcfg}")
+    targetdir ("generated/outputs/" .. "%{cfg.buildcfg}")
+    objdir ("generated/obj/" .. "%{prj.name}/" .. "%{cfg.buildcfg}")
 
 -- プロジェクトの定義
 project "DirectXGame"
@@ -44,6 +44,12 @@ project "DirectXGame"
         "dxgi",
         "dxguid",
         "D3DCompiler"
+    }
+
+    postbuildcommands {
+        '{COPYDIR} "%{wks.location}/MTEngine/Assets" "%{cfg.targetdir}/MTEngine/Assets"',
+        '{COPYFILE} "%{wks.location}/externals/libs/dxcompiler.dll" "%{cfg.targetdir}"',
+        '{COPYFILE} "%{wks.location}/externals/libs/dxil.dll" "%{cfg.targetdir}"'
     }
 
     -- 構成ごとの個別設定
