@@ -78,7 +78,7 @@ namespace MTEngine {
         descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
         // ルートパラメータの設定
-        D3D12_ROOT_PARAMETER rootParameters[5] = {};
+        D3D12_ROOT_PARAMETER rootParameters[6] = {};
         rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
         rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
         rootParameters[0].Descriptor.ShaderRegister = 0;
@@ -100,6 +100,10 @@ namespace MTEngine {
         rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
         rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
         rootParameters[4].Descriptor.ShaderRegister = 1; // t1
+
+        rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+        rootParameters[5].Descriptor.ShaderRegister = 3;
 
         descriptionRootSignature.pParameters = rootParameters;
         descriptionRootSignature.NumParameters = _countof(rootParameters);

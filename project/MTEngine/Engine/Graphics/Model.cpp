@@ -220,11 +220,15 @@ namespace MTEngine {
 
             (*resource.materialBuffer)->color =
                 { 1.0f, 1.0f, 1.0f, 1.0f };
-            (*resource.materialBuffer)->enabledLighting = 0;
+            (*resource.materialBuffer)->enabledLighting = 1;
             (*resource.materialBuffer)->uvTransform = MakeIdentityMatrix();
-            (*resource.materialBuffer)->lightingMode = 0;
+            (*resource.materialBuffer)->lightingMode = 3;
             (*resource.materialBuffer)->useTexture = 0;
             (*resource.materialBuffer)->isSelected = 0;
+            (*resource.materialBuffer)->shininess = 32.0f;
+            (*resource.materialBuffer)->padding3[0] = 0.0f;
+            (*resource.materialBuffer)->padding3[1] = 0.0f;
+
 
             VertexData* vertexData = nullptr;
             resource.vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));

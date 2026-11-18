@@ -33,6 +33,9 @@ namespace MTEngine {
             const DebugCamera& camera,
             Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList);
 
+        // 平行光源の設定を編集するImGuiウィンドウを描画する。
+        void DrawImGui();
+
     private:
         bool LoadModel(
             SceneObject& object,
@@ -49,7 +52,8 @@ namespace MTEngine {
 
         Microsoft::WRL::ComPtr<ID3D12Device> device_;
         TextureManager textureManager_;
-        DirectionalLightConstantBuffer lightBuffer_;
+        DirectionalLightConstantBuffer lightBuffer_; 
+        CameraConstantBuffer cameraBuffer_;
         PipelineManager* pipelineManager_ = nullptr;
         std::unordered_map<std::string, std::shared_ptr<Model>> modelCache_;
         std::unordered_map<std::string, InstanceBuffer> instanceBuffers_;

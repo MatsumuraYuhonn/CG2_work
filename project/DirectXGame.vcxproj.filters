@@ -302,5 +302,8 @@
     <FxCompile Include="MTEngine\Assets\Shaders\object3d.VS.hlsl">
       <Filter>Assets\Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="MTEngine\Assets\Shaders\Object3dInstanced.VS.hlsl">
+      <Filter>Assets\Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

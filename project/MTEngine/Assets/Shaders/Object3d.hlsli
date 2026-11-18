@@ -4,6 +4,7 @@ struct VertexShaderOutput
     float4 position : SV_POSITION; // クリップ空間での頂点位置
     float2 texcoord : TEXCOORD0; // UV座標
     float3 normal : NORMAL0; // 法線ベクトル
+    float3 worldPosition : POSITION0; // ワールド空間での位置
 };
 
 // マテリアル定数バッファ（C++側のMaterial構造体と一致させる）
@@ -15,7 +16,8 @@ struct Material
     int lightingMode;
     int useTexture;
     int isSelected;
-    float3 padding3;
+    float shininess;
+    float2 padding3;
 
 };
     

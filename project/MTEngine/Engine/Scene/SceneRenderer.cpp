@@ -14,6 +14,10 @@
 #include "MTEngine/Engine/Math/Matrix.h"
 #include "MTEngine/Engine/Scene/Scene.h"
 
+#ifdef USE_IMGUI
+#include "externals/imgui/imgui.h"
+#endif
+
 namespace MTEngine {
 
     namespace {
@@ -79,8 +83,76 @@ namespace MTEngine {
         lightBuffer_->direction = { 0.0f, -1.0f, 1.0f };
         lightBuffer_->intensity = 1.0f;
 
+
+        if (!cameraBuffer_.Initialize(device)) {
+            return false;
+        }
+
+        cameraBuffer_->worldPosition = { 0.0f,0.0f,0.0f };
+        cameraBuffer_->padding = 0.0f;
+
+
         isInitialized_ = true;
         return true;
+    }
+
+    void SceneRenderer::DrawImGui() {
+#ifdef USE_IMGUI
+        if (!isInitialized_) {
+            return;
+        }
+
+        ImGui::Begin("Directional Light");
+
+        ImGui::ColorEdit3(
+            "Color",
+            &lightBuffer_->color.x);
+
+        float direction[3] = {
+            lightBuffer_->direction.x,
+            lightBuffer_->direction.y,
+            lightBuffer_->direction.z
+        };
+
+        if (ImGui::DragFloat3(
+            "Direction",
+            direction,
+            0.01f,
+            -1.0f,
+            1.0f,
+            "%.2f")) {
+
+            const float lengthSquared =
+                direction[0] * direction[0] +
+                direction[1] * direction[1] +
+                direction[2] * direction[2];
+
+            if (lengthSquared > 0.000001f) {
+                lightBuffer_->direction = {
+                    direction[0],
+                    direction[1],
+                    direction[2]
+                };
+            }
+        }
+
+        ImGui::DragFloat(
+            "Intensity",
+            &lightBuffer_->intensity,
+            0.01f,
+            0.0f,
+            5.0f,
+            "%.2f",
+            ImGuiSliderFlags_AlwaysClamp);
+
+        if (ImGui::Button("Reset Light")) {
+            lightBuffer_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+            lightBuffer_->direction = { 0.0f, -1.0f, -1.0f };
+            lightBuffer_->intensity = 1.0f;
+        }
+
+        ImGui::End();
+#endif
     }
 
     void SceneRenderer::Draw(
@@ -131,6 +203,14 @@ namespace MTEngine {
         commandList->SetGraphicsRootConstantBufferView(
             2,
             lightBuffer_.GetGPUVirtualAddress());
+
+
+        cameraBuffer_->worldPosition = camera.GetPosition();
+
+        commandList->SetGraphicsRootConstantBufferView(
+            5, cameraBuffer_.GetGPUVirtualAddress()
+        );
+
 
         const Matrix4x4& view = camera.GetViewMatrix();
         const Matrix4x4& projection = camera.GetProjectionMatrix();

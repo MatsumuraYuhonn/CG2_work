@@ -58,6 +58,13 @@ namespace MTEngine {
 
 
 
+    bool CameraConstantBuffer::Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device) {
+
+        return InitializeInternal(device, sizeof(CameraForGPU));
+
+    }
+
+
     bool MaterialConstantBuffer::Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device) {
         return InitializeInternal(device, sizeof(Material));
     }

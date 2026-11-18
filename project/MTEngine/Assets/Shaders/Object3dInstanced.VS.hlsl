@@ -25,6 +25,10 @@ VertexShaderOutput main(
 
     VertexShaderOutput output;
     output.position = mul(input.position, transformation.WVP);
+    
+    float4 worldPosition = mul(input.position, transformation.World);
+    output.worldPosition = worldPosition.xyz;
+    
     output.texcoord = TransformUV(input.texcoord, gMaterial.uvTransform);
     output.normal = normalize(
         mul(input.normal, (float3x3) transformation.World));

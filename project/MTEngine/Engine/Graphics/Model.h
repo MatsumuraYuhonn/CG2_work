@@ -56,10 +56,10 @@ namespace MTEngine {
 
         struct MeshResource {
             Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;
-            D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+            D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
             std::string textureFilePath;
             std::unique_ptr<MaterialConstantBuffer> materialBuffer;
-            UINT vertexCount; // 頂点数を保持
+            UINT vertexCount = 0;
         };
 
         std::vector<MeshResource> meshResources_;

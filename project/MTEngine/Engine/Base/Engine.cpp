@@ -220,6 +220,7 @@ namespace MTEngine {
         input_->Update();
         imGuiManager_->BeginFrame();
         editor_->Update();
+        sceneRenderer_->DrawImGui();
         OnUpdate();
 #ifdef USE_IMGUI
         debugCamera_.Update(

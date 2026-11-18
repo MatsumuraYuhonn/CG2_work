@@ -10,6 +10,13 @@
 // スプライトの描画に必要なマテリアル定数バッファ用構造体
 namespace MTEngine {
 
+    enum class LightingMode : int32_t {
+        None = 0,
+        Lambert = 1,
+        HalfLambert = 2,
+        Phong = 3,
+    };
+
     struct Material {
         Vector4 color;              // スプライトの色情報
         int32_t enabledLighting;    // ライティングの有効/無効フラグ
@@ -18,7 +25,8 @@ namespace MTEngine {
         int32_t lightingMode;
         int32_t useTexture;
         int32_t isSelected;
-        float padding3[3];
+        float shininess;
+        float padding3[2];
     };
 
 }

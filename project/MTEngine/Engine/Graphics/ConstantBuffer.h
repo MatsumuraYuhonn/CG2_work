@@ -11,6 +11,11 @@ namespace MTEngine {
         float intensity;
     };
 
+    struct CameraForGPU {
+        Vector3 worldPosition;
+        float padding;
+    };
+
 }
 
 // 定数バッファの基底クラス。リソースの作成とマッピングを管理する
@@ -38,6 +43,22 @@ namespace MTEngine {
 
         Microsoft::WRL::ComPtr<ID3D12Resource> resource_;
         void* mappedData_;
+    };
+
+    class CameraConstantBuffer : public ConstantBuffer {
+
+    public:
+
+        bool Initialize(Microsoft::WRL::ComPtr<ID3D12Device> device);
+
+        CameraForGPU* operator->() {
+            return reinterpret_cast<CameraForGPU*>(mappedData_);
+        }
+        
+        const CameraForGPU* operator->() const {
+            return reinterpret_cast<const CameraForGPU*>(mappedData_);
+        }
+
     };
 
     struct Material;
