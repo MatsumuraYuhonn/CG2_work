@@ -78,6 +78,8 @@ StyleCopReport.xml
 *.ilk
 *.meta
 *.obj
+!MTEngine/Assets/Resources/*.obj
+!MTEngine/Assets/Resources/**/*.obj
 *.iobj
 *.pch
 *.pdb
